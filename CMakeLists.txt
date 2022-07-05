@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.19)
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
-project(TNT)
+project(Filament)
 
 # ==================================================================================================
 # Options
@@ -696,35 +696,38 @@ if (WEBGL)
     add_subdirectory(web/samples)
 endif()
 
+option(USED_AS_LIBRARY "used as library" OFF)
+
 if (IS_HOST_PLATFORM)
     if (FILAMENT_SUPPORTS_OPENGL)
         add_subdirectory(${LIBRARIES}/bluegl)
     endif()
-    add_subdirectory(${LIBRARIES}/filamentapp)
+
+    add_subdirectory(${TOOLS}/matc)
+    add_subdirectory(${TOOLS}/cmgen)
+    add_subdirectory(${TOOLS}/filamesh)
+    add_subdirectory(${TOOLS}/mipgen)
+    add_subdirectory(${TOOLS}/resgen)
+    add_subdirectory(${TOOLS}/glslminifier)
     add_subdirectory(${LIBRARIES}/imageio)
-
-    add_subdirectory(${FILAMENT}/samples)
-
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
     add_subdirectory(${EXTERNAL}/etc2comp)
-    add_subdirectory(${EXTERNAL}/libassimp/tnt)
     add_subdirectory(${EXTERNAL}/libpng/tnt)
-    add_subdirectory(${EXTERNAL}/libsdl2/tnt)
-    add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
 
-    add_subdirectory(${TOOLS}/cmgen)
-    add_subdirectory(${TOOLS}/cso-lut)
-    add_subdirectory(${TOOLS}/filamesh)
-    add_subdirectory(${TOOLS}/glslminifier)
-    add_subdirectory(${TOOLS}/matc)
-    add_subdirectory(${TOOLS}/matinfo)
-    add_subdirectory(${TOOLS}/mipgen)
-    add_subdirectory(${TOOLS}/normal-blending)
-    add_subdirectory(${TOOLS}/resgen)
-    add_subdirectory(${TOOLS}/rgb-to-lmsr)
-    add_subdirectory(${TOOLS}/roughness-prefilter)
-    add_subdirectory(${TOOLS}/specular-color)
+    if (NOT USED_AS_LIBRARY)
+        add_subdirectory(${LIBRARIES}/filamentapp)
+        add_subdirectory(${FILAMENT}/samples)
+        add_subdirectory(${EXTERNAL}/libassimp/tnt)
+        add_subdirectory(${EXTERNAL}/libsdl2/tnt)
+        add_subdirectory(${EXTERNAL}/libz/tnt)
+        add_subdirectory(${TOOLS}/cso-lut)
+        add_subdirectory(${TOOLS}/matinfo)
+        add_subdirectory(${TOOLS}/normal-blending)
+        add_subdirectory(${TOOLS}/rgb-to-lmsr)
+        add_subdirectory(${TOOLS}/roughness-prefilter)
+        add_subdirectory(${TOOLS}/specular-color)
+    endif()
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
