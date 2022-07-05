@@ -51,8 +51,21 @@ material {
         { type : mat3, name : transmissionUvMatrix, precision: high },
 
         // IOR
-        { type : float, name : ior }
+        { type : float, name : ior },
+
+        // Clip Space Transform
+        {
+            type : float4x4,
+            precision : high,
+            name : cstransform
+        }
     ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.clipSpaceTransform = materialParams.cstransform;
+    }
 }
 
 fragment {

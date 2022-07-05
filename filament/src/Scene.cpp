@@ -234,7 +234,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         // The shading normal must be flipped for mirror transformations.
         // Basically we're shading the other side of the polygon and therefore need to negate the
         // normal, similar to what we already do to support double-sided lighting.
-        if (visibility.reversedWindingOrder) {
+        if (visibility.reversedWindingOrder && mInvertNormalWithReverseWindingFace) {
             m = -m;
         }
 
@@ -441,6 +441,11 @@ bool FScene::hasContactShadows() const noexcept {
     return hasContactShadows && mHasContactShadows;
 }
 
+void FScene::setNormalInvertedWithReverseWindingFace(bool bInvert)
+{
+    mInvertNormalWithReverseWindingFace = bInvert;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -487,6 +492,10 @@ size_t Scene::getLightCount() const noexcept {
 
 bool Scene::hasEntity(Entity entity) const noexcept {
     return upcast(this)->hasEntity(entity);
+}
+
+void Scene::setNormalInvertedWithReverseWindingFace(bool bInvert){
+    upcast(this)->setNormalInvertedWithReverseWindingFace(bInvert);
 }
 
 } // namespace filament

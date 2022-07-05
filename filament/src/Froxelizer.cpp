@@ -430,7 +430,7 @@ bool Froxelizer::update() noexcept {
             // ==> i = -log2(z_screen * (far/near)) * (1/linearizer) + zcount
             // ==> i = log2(z_screen * (far/near)) * (-1/linearizer) + zcount
             mParamsZ[0] = mZLightFar / Pw;
-            mParamsZ[1] = 0.0f;
+            mParamsZ[1] = mZLightFar * Pz / Pw;
             mParamsZ[2] = -mLinearizer;
         } else {
             // orthographic projection

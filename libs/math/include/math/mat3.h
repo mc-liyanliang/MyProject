@@ -286,7 +286,7 @@ public:
      * @warning normals transformed by this matrix must be normalized
      */
     static constexpr TMat33 getTransformForNormals(const TMat33& m) noexcept {
-        return matrix::cof(m);
+        return matrix::transpose(matrix::inverse(m));
     }
 
     /**

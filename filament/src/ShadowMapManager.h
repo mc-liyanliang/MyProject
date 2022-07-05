@@ -203,7 +203,7 @@ private:
     // 16-bits seems enough.
     // TODO: make it an option.
     // TODO: iOS does not support the DEPTH16 texture format.
-    backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
+    backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH32F;
 
     ShadowMappingUniforms mShadowMappingUniforms;
 

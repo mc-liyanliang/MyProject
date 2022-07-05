@@ -156,6 +156,8 @@ public:
      * @return Whether the given entity is in the Scene.
      */
     bool hasEntity(utils::Entity entity) const noexcept;
+
+    void setNormalInvertedWithReverseWindingFace(bool bInvert);
 };
 
 } // namespace filament

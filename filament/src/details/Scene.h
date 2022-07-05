@@ -219,6 +219,7 @@ private:
     LightSoa mLightData;
     backend::Handle<backend::HwBufferObject> mRenderableViewUbh; // This is actually owned by the view.
     bool mHasContactShadows = false;
+    bool mInvertNormalWithReverseWindingFace = false;
 };
 
 FILAMENT_UPCAST(Scene)

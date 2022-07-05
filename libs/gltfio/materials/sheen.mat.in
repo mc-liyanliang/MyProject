@@ -54,8 +54,21 @@ material {
         { type : mat3, name : sheenRoughnessUvMatrix, precision: high },
 
         // Reflectance
-        { type : float, name : reflectance }
+        { type : float, name : reflectance },
+
+        // Clip Space Transform
+        {
+            type : float4x4,
+            precision : high,
+            name : cstransform
+        }
     ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.clipSpaceTransform = materialParams.cstransform;
+    }
 }
 
 fragment {
