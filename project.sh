@@ -192,10 +192,10 @@ function generate_desktop_target {
         build_targets=${BUILD_CUSTOM_TARGETS}
     fi
 
-    echo "Generating ${lc_target} in out/cmake-${lc_target}..."
-    mkdir -p "out/cmake-${lc_target}"
+    echo "Generating ${lc_target} in ../Builds/Linux/filament/..."
+    mkdir -p "../Builds/Linux/filament/"
 
-    cd "out/cmake-${lc_target}"
+    cd "../Builds/Linux/filament/"
 
     # On macOS, set the deployment target to 10.15.
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
@@ -211,7 +211,7 @@ function generate_desktop_target {
         cmake \
             -G "Xcode" \
             -Tbuildsystem=1 \
-            -DIMPORT_EXECUTABLES_DIR="out/cmake-${lc_target}" \
+            -DIMPORT_EXECUTABLES_DIR="../Builds/Linux/filament/" \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DUSED_AS_LIBRARY=1 \
@@ -219,7 +219,7 @@ function generate_desktop_target {
             ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
-            ../..
+            ../../../renderer/
     fi
 
     cd ../..
@@ -611,16 +611,16 @@ function generate_ios_target {
     local platform=$3
 
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    mkdir -p "../Builds/ios/filament/"
 
-    cd "out/cmake-ios-${lc_target}-${arch}"
+    cd "../Builds/ios/filament/"
 
-    build_desktop_target "$1" "${MOBILE_HOST_TOOLS}" "out/cmake-ios-${lc_target}-${arch}"
+    build_desktop_target "$1" "${MOBILE_HOST_TOOLS}" "../Builds/ios/filament/"
 
      if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
          cmake \
              -G "Xcode" \
-             -DIMPORT_EXECUTABLES_DIR="out/cmake-ios-${lc_target}-${arch}" \
+             -DIMPORT_EXECUTABLES_DIR="../Builds/ios/filament/" \
              -DCMAKE_BUILD_TYPE="$1" \
              -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
              -DIOS_ARCH="${arch}" \
@@ -628,7 +628,7 @@ function generate_ios_target {
              -DIOS=1 \
              -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
              ${MATDBG_OPTION} \
-             ../..
+             ../../../renderer/
      fi
 
     cd ../..

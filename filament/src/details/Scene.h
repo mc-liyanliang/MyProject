@@ -72,6 +72,8 @@ public:
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;
 
+    void setNormalInvertedWithReverseWindingFace(bool bInvert);
+
 public:
     /*
      * Filaments-scope Public API

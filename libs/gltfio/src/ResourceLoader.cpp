@@ -110,6 +110,9 @@ struct ResourceLoader::Impl {
     // two caches: one for URI-based textures and one for buffer-based textures.
     BufferTextureCache mBufferTextureCache;
     UriTextureCache mUriTextureCache;
+    uint32_t mBufferTextureCompleteCount;
+    uint32_t mUriTextureCompleteCount;
+
     int mNumDecoderTasks;
     int mNumDecoderTasksFinished;
     JobSystem::Job* mDecoderRootJob = nullptr;
@@ -600,7 +603,7 @@ void ResourceLoader::Impl::decodeSingleTexture() {
 }
 
 void ResourceLoader::Impl::uploadPendingTextures() {
-    auto upload = [this](TextureCacheEntry* entry, Engine& engine) {
+    auto upload = [this](TextureCacheEntry* entry, Engine& engine, uint32_t& completeCount) { {
         Texture* texture = entry->texture;
         uint8_t* texels = entry->texels;
         if (texture && texels && !entry->completed) {
@@ -612,10 +615,21 @@ void ResourceLoader::Impl::uploadPendingTextures() {
             entry->completed = true;
             mNumDecoderTasksFinished++;
             mCurrentAsset->mDependencyGraph.markAsReady(texture);
+
+            ++completeCount;
         }
     };
-    for (auto& pair : mBufferTextureCache) upload(pair.second.get(), *mEngine);
-    for (auto& pair : mUriTextureCache) upload(pair.second.get(), *mEngine);
+    
+    if (mBufferTextureCompleteCount != mBufferTextureCache.size())
+    {
+        for (auto& pair : mBufferTextureCache) upload(pair.second.get(), *mEngine, mBufferTextureCompleteCount);
+    }
+    
+    if (mUriTextureCompleteCount != mUriTextureCache.size())
+    {
+        for (auto& pair : mUriTextureCache) upload(pair.second.get(), *mEngine, mUriTextureCompleteCount);
+    }
+
 }
 
 void ResourceLoader::Impl::releasePendingTextures() {
@@ -741,6 +755,8 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
     releasePendingTextures();
     mBufferTextureCache.clear();
     mUriTextureCache.clear();
+    mBufferTextureCompleteCount = 0;
+    mUriTextureCompleteCount = 0;
     mCurrentAsset = nullptr;
     mNumDecoderTasksFinished = 0;
     mNumDecoderTasks = 0;
@@ -756,6 +772,9 @@ bool ResourceLoader::Impl::createTextures(bool async) {
 
     mBufferTextureCache.clear();
     mUriTextureCache.clear();
+    mBufferTextureCompleteCount = 0;
+    mUriTextureCompleteCount = 0;
+
 
     // First, determine texture dimensions and create texture cache entries.
     FFilamentAsset* asset = mCurrentAsset;

@@ -29,6 +29,11 @@ using namespace filament;
 using namespace gltfio;
 using namespace utils;
 
+const std::string vertexShader = R"(
+void materialVertex(inout MaterialVertexInputs material) {
+    material.clipSpaceTransform = materialParams.cstransform;
+})";
+
 namespace {
 
 class MaterialGenerator : public MaterialProvider {
@@ -320,6 +325,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .specularAntiAliasing(true)
             .clearCoatIorChange(false)
             .material(shader.c_str())
+            .materialVertex(vertexShader.c_str())
             .doubleSided(config.doubleSided)
             .transparencyMode(config.doubleSided ?
                     MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
@@ -519,6 +525,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasIOR) {
         builder.parameter(MaterialBuilder::UniformType::FLOAT, "ior");
     }
+
+    builder.parameter(MaterialBuilder::UniformType::MAT4, filamat::MaterialBuilder::ParameterPrecision::DEFAULT, "cstransform");
 
     if (config.unlit) {
         builder.shading(Shading::UNLIT);

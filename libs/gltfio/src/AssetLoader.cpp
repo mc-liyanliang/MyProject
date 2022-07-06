@@ -822,7 +822,7 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
             builder.intensity(light->intensity);
             break;
         case LightManager::Type::POINT:
-            builder.intensityCandela(light->intensity);
+            builder.intensity(light->intensity, 1.0);
             break;
         case LightManager::Type::FOCUSED_SPOT:
         case LightManager::Type::SPOT:
@@ -830,7 +830,8 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
             builder.spotLightCone(
                     light->spot_inner_cone_angle,
                     light->spot_outer_cone_angle);
-            builder.intensityCandela(light->intensity);
+            builder.intensity(light->intensity, 1.0);
+            builder.castShadows(true);
             break;
     }
 
