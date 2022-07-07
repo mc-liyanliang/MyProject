@@ -603,7 +603,7 @@ void ResourceLoader::Impl::decodeSingleTexture() {
 }
 
 void ResourceLoader::Impl::uploadPendingTextures() {
-    auto upload = [this](TextureCacheEntry* entry, Engine& engine, uint32_t& completeCount) { {
+    auto upload = [this](TextureCacheEntry* entry, Engine& engine, uint32_t& completeCount) {
         Texture* texture = entry->texture;
         uint8_t* texels = entry->texels;
         if (texture && texels && !entry->completed) {
