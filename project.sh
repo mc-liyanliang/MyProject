@@ -210,7 +210,6 @@ function generate_desktop_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "Xcode" \
-            -Tbuildsystem=1 \
             -DIMPORT_EXECUTABLES_DIR="../Builds/Linux/filament/" \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
@@ -226,13 +225,7 @@ function generate_desktop_target {
 }
 
 function generate_proj_desktop {
-    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
-        generate_desktop_target "Debug" "$1"
-    fi
-
-    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
-        generate_desktop_target "Release" "$1"
-    fi
+    generate_desktop_target "Debug" "$1"
 }
 
 function build_desktop_target {
@@ -916,10 +909,10 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
     esac
 done
 
-if [[ "$#" == "0" ]]; then
-    print_help
-    exit 1
-fi
+#if [[ "$#" == "0" ]]; then
+#    print_help
+#    exit 1
+#fi
 
 shift $((OPTIND - 1))
 
