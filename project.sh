@@ -218,7 +218,7 @@ function generate_desktop_target {
             ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
-            ../../../filamenttest/
+            ../../../renderer/
     fi
 
     cd ../..
@@ -236,7 +236,7 @@ function build_desktop_target {
         build_targets=${BUILD_CUSTOM_TARGETS}
     fi
 
-    echo "Building ${lc_target} in out/cmake-${lc_target}..."
+    echo "Building desktop tools"
     mkdir -p "desktop_tool/${lc_target}"
 
     cd "desktop_tool/${lc_target}"
@@ -263,7 +263,7 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
-            ../../../../
+            ../../../../../renderer
     fi
     ${BUILD_COMMAND} ${build_targets}
 
@@ -281,16 +281,6 @@ function build_desktop_target {
     fi
 
     cd ../..
-}
-
-function build_desktop {
-    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
-        build_desktop_target "Debug" "$1"
-    fi
-
-    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
-        build_desktop_target "Release" "$1"
-    fi
 }
 
 function build_webgl_with_target {
@@ -619,9 +609,10 @@ function generate_ios_target {
              -DIOS_ARCH="${arch}" \
              -DPLATFORM_NAME="${platform}" \
              -DIOS=1 \
-             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
+             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+             -DCMAKE_TOOLCHAIN_FILE=../../../renderer/third_party/clang/iOS.cmake \
              ${MATDBG_OPTION} \
-             ../../../filamenttest/
+             ../../../renderer/
      fi
 
     cd ../..
@@ -650,41 +641,7 @@ function generate_proj_ios {
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
 
-    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
-        generate_ios_target "Debug" "arm64" "iphoneos"
-        if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
-            generate_ios_target "Debug" "x86_64" "iphonesimulator"
-        fi
-
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-debug/filament/lib/universal \
-                out/ios-debug/filament/lib/arm64 \
-                out/ios-debug/filament/lib/x86_64
-            rm -rf out/ios-debug/filament/lib/arm64
-            rm -rf out/ios-debug/filament/lib/x86_64
-        fi
-
-        archive_ios "Debug"
-    fi
-
-    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
-        generate_ios_target "Release" "arm64" "iphoneos"
-        if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
-            generate_ios_target "Release" "x86_64" "iphonesimulator"
-        fi
-
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-release/filament/lib/universal \
-                out/ios-release/filament/lib/arm64 \
-                out/ios-release/filament/lib/x86_64
-            rm -rf out/ios-release/filament/lib/arm64
-            rm -rf out/ios-release/filament/lib/x86_64
-        fi
-
-        archive_ios "Release"
-    fi
+    generate_ios_target "Release" "arm64" "iphoneos"
 }
 
 function build_web_docs {
