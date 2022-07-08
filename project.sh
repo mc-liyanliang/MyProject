@@ -218,7 +218,7 @@ function generate_desktop_target {
             ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
-            ../../../renderer/
+            ../../../filamenttest/
     fi
 
     cd ../..
@@ -621,7 +621,7 @@ function generate_ios_target {
              -DIOS=1 \
              -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
              ${MATDBG_OPTION} \
-             ../../../renderer/
+             ../../../filamenttest/
      fi
 
     cd ../..
