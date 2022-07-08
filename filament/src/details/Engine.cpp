@@ -18,8 +18,6 @@
 
 #include "MaterialParser.h"
 #include "ResourceAllocator.h"
-
-#include "DFG.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -82,6 +80,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         }
         if (platform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
+            delete instance;
             return nullptr;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
@@ -95,6 +94,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         if (UTILS_UNLIKELY(!instance->mDriver)) {
             // something went horribly wrong during driver initialization
             instance->mDriverThread.join();
+            delete instance;
             return nullptr;
         }
     }
@@ -142,6 +142,7 @@ FEngine* FEngine::getEngine(void* token) {
         if (UTILS_UNLIKELY(!instance->mDriver)) {
             // something went horribly wrong during driver initialization
             instance->mDriverThread.join();
+            delete instance;
             return nullptr;
         }
 
@@ -193,7 +194,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
 
 uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
     // 1 thread for the user, 1 thread for the backend
-    int threadCount = std::thread::hardware_concurrency() - 2;
+    int threadCount = (int)std::thread::hardware_concurrency() - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
     return threadCount;
@@ -208,7 +209,9 @@ void FEngine::init() {
     SYSTRACE_CALL();
 
     // this must be first.
-    mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
+    assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
+    ::new(&mDriverApiStorage) DriverApi(*mDriver, mCommandBufferQueue.getCircularBuffer());
+
     DriverApi& driverApi = getDriverApi();
 
     mResourceAllocator = new ResourceAllocator(driverApi);
@@ -291,11 +294,15 @@ void FEngine::init() {
     mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
     mDummyOneIntegerTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8I, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
 
     // initialize the dummy textures so that their contents are not undefined
 
@@ -320,17 +327,18 @@ void FEngine::init() {
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
 
+    driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+
     mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
 
     mPostProcessManager.init();
     mLightManager.init(*this);
-    mDFG = std::make_unique<DFG>(*this);
+    mDFG.init(*this);
 }
 
 FEngine::~FEngine() noexcept {
     SYSTRACE_CALL();
-
-    ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
     delete mResourceAllocator;
     delete mDriver;
     if (mOwnPlatform) {
@@ -340,6 +348,9 @@ FEngine::~FEngine() noexcept {
 
 void FEngine::shutdown() {
     SYSTRACE_CALL();
+
+    // by construction this should never be nullptr
+    assert_invariant(mResourceAllocator);
 
     ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
             "Engine::shutdown() called from the wrong thread!");
@@ -360,7 +371,7 @@ void FEngine::shutdown() {
 
     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
     mResourceAllocator->terminate();
-    mDFG->terminate();                      // free-up the DFG
+    mDFG.terminate(*this);                  // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate();             // free-up all cameras
@@ -410,6 +421,7 @@ void FEngine::shutdown() {
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyOneIntegerTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
+    driver.destroyTexture(mDummyZeroTextureArray);
 
     driver.destroyRenderTarget(mDefaultRenderTarget);
 
@@ -436,14 +448,15 @@ void FEngine::shutdown() {
     // These callbacks CANNOT call driver APIs.
     getDriver().purge();
 
+    // and destroy the CommandStream
+    std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));
+
     /*
      * Terminate the JobSystem...
      */
 
-    // detach this thread from the jobsystem
+    // detach this thread from the JobSystem
     mJobSystem.emancipate();
-
-    mTerminated = true;
 }
 
 void FEngine::prepare() {
@@ -461,6 +474,9 @@ void FEngine::prepare() {
 
     // Commit default material instances.
     mMaterials.forEach([&driver](FMaterial* material) {
+#if FILAMENT_ENABLE_MATDBG
+        material->checkProgramEdits();
+#endif
         material->getDefaultInstance()->commit(driver);
     });
 }
@@ -989,7 +1005,7 @@ bool FEngine::execute() {
     // execute all command buffers
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
-            mCommandStream.execute(item.begin);
+            getDriverApi().execute(item.begin);
             mCommandBufferQueue.releaseBuffer(item);
         }
     }

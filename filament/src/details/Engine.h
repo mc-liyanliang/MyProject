@@ -20,6 +20,7 @@
 #include "upcast.h"
 
 #include "Allocators.h"
+#include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
 
@@ -76,6 +77,7 @@ using MaterialKey = uint32_t;
 
 #include <chrono>
 #include <memory>
+#include <new>
 #include <random>
 #include <unordered_map>
 
@@ -96,7 +98,6 @@ class FScene;
 class FSwapChain;
 class FView;
 
-class DFG;
 class ResourceAllocator;
 
 /*
@@ -147,8 +148,12 @@ public:
     ~FEngine() noexcept;
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
-    DriverApi& getDriverApi() noexcept { return mCommandStream; }
-    DFG* getDFG() const noexcept { return mDFG.get(); }
+
+    DriverApi& getDriverApi() noexcept {
+        return *std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage));
+    }
+
+    DFG const& getDFG() const noexcept { return mDFG; }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
@@ -348,6 +353,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
 private:
@@ -377,7 +383,6 @@ private:
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
     void* mSharedGLContext = nullptr;
-    bool mTerminated = false;
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
     FIndexBuffer* mFullScreenTriangleIb = nullptr;
@@ -418,11 +423,13 @@ private:
     // FMaterialInstance are handled directly by FMaterial
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
 
-    std::unique_ptr<DFG> mDFG;
+    DFG mDFG;
 
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;
-    DriverApi mCommandStream;
+    std::aligned_storage<sizeof(DriverApi), alignof(DriverApi)>::type mDriverApiStorage;
+    static_assert( sizeof(mDriverApiStorage) >= sizeof(DriverApi) );
+
     uint32_t mFlushCounter = 0;
 
     LinearAllocatorArena mPerRenderPassAllocator;
@@ -452,6 +459,7 @@ private:
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyZeroTextureArray;
     backend::Handle<backend::HwTexture> mDummyOneIntegerTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 

@@ -272,7 +272,7 @@ public:
             backend::Handle<backend::HwBufferObject> uboHandle) noexcept;
 
     // specifies camera information (e.g. used for sorting commands)
-    void setCamera(const CameraInfo& camera) noexcept { mCamera = camera; }
+    void setCamera(const CameraInfo& camera) noexcept;
 
     //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
@@ -378,7 +378,7 @@ private:
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
-    static void setupColorCommand(Command& cmdDraw,
+    static void setupColorCommand(Command& cmdDraw, Variant variant,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
 
     static void updateSummedPrimitiveCounts(
@@ -406,7 +406,8 @@ private:
     backend::Handle<backend::HwBufferObject> mUboHandle;
 
     // info about the camera
-    CameraInfo mCamera;
+    math::float3 mCameraPosition{};
+    math::float3 mCameraForwardVector{};
 
     // info about the scene features (e.g.: has shadows, lighting, etc...)
     RenderFlags mFlags{};

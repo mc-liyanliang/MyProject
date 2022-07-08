@@ -33,7 +33,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
 /**
  * Types and enums used by filament's driver.
  *
@@ -41,7 +40,7 @@ namespace filament {
  * internal redeclaration of these types.
  * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
-namespace backend {
+namespace filament::backend {
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
@@ -142,9 +141,9 @@ struct Viewport {
     uint32_t width;     //!< width in pixels
     uint32_t height;    //!< height in pixels
     //! get the right coordinate in window space of the viewport
-    int32_t right() const noexcept { return left + width; }
+    int32_t right() const noexcept { return left + int32_t(width); }
     //! get the top coordinate in window space of the viewport
-    int32_t top() const noexcept { return bottom + height; }
+    int32_t top() const noexcept { return bottom + int32_t(height); }
 };
 
 /**
@@ -160,7 +159,7 @@ struct DepthRange {
  * @see Fence, Fence::wait()
  */
 enum class FenceStatus : int8_t {
-    ERROR = -1,                 //!< An error occured. The Fence condition is not satisfied.
+    ERROR = -1,                 //!< An error occurred. The Fence condition is not satisfied.
     CONDITION_SATISFIED = 0,    //!< The Fence condition is satisfied.
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
 };
@@ -169,7 +168,7 @@ enum class FenceStatus : int8_t {
  * Status codes for sync objects
  */
 enum class SyncStatus : int8_t {
-    ERROR = -1,          //!< An error occured. The Sync is not signaled.
+    ERROR = -1,          //!< An error occurred. The Sync is not signaled.
     SIGNALED = 0,        //!< The Sync is signaled.
     NOT_SIGNALED = 1,    //!< The Sync is not signaled yet
 };
@@ -789,7 +788,6 @@ enum class BlendFunction : uint8_t {
 //! Stream for external textures
 enum class StreamType {
     NATIVE,     //!< Not synchronized but copy-free. Good for video.
-    TEXTURE_ID, //!< Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26.
     ACQUIRED,   //!< Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+.
 };
 
@@ -906,6 +904,16 @@ enum ShaderType : uint8_t {
 };
 static constexpr size_t PIPELINE_STAGE_COUNT = 2;
 
+struct ShaderStageFlags {
+    bool vertex : 1;
+    bool fragment : 1;
+    bool hasShaderType(ShaderType type) const {
+        return (vertex && type == ShaderType::VERTEX) ||
+               (fragment && type == ShaderType::FRAGMENT);
+    }
+};
+static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { .vertex = true, .fragment = true };
+
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
  * can be discarded at the beginning and end of the render pass.
@@ -988,8 +996,7 @@ enum class Workaround : uint16_t {
     ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
         : public std::true_type {};
@@ -1026,6 +1033,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend:
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderStageFlags stageFlags);
 #endif
 
 #endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H

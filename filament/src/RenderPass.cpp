@@ -74,6 +74,11 @@ void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> v
     mUboHandle = uboHandle;
 }
 
+void RenderPass::setCamera(const CameraInfo& camera) noexcept {
+    mCameraPosition = camera.getPosition();
+    mCameraForwardVector = camera.getForwardVector();
+}
+
 void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept {
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
         mPolygonOffset = *polygonOffset;
@@ -97,7 +102,6 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     const RenderFlags renderFlags = mFlags;
     const Variant variant = mVariant;
     const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
-    CameraInfo const& camera = mCamera;
 
     // up-to-date summed primitive counts needed for generateCommands()
     FScene::RenderableSoa const& soa = *mRenderableSoa;
@@ -112,9 +116,8 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     commandCount += 1; // for the sentinel
     Command* const curr = append(commandCount);
 
-    // we extract camera position/forward outside of the loop, because these are not cheap.
-    const float3 cameraPosition(camera.getPosition());
-    const float3 cameraForwardVector(camera.getForwardVector());
+    const float3 cameraPosition(mCameraPosition);
+    const float3 cameraForwardVector(mCameraForwardVector);
     auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
                  cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {
@@ -171,12 +174,11 @@ void RenderPass::sortCommands() noexcept {
 /* static */
 UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
-void RenderPass::setupColorCommand(Command& cmdDraw,
+void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    Variant variant = Variant::filterVariant(
-            cmdDraw.primitive.materialVariant, ma->isVariantLit());
+    variant = Variant::filterVariant(variant, ma->isVariantLit());
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -395,10 +397,12 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             auto const& primitive = primitives[pi];
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
+            FMaterial const* const ma = mi->getMaterial();
+
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.materialVariant = variant;
-                RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmdColor, variant, mi, inverseFrontFaces);
+                ma->prepareProgram(cmdColor.primitive.materialVariant);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
@@ -444,7 +448,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // correct for TransparencyMode::DEFAULT -- i.e. cancel the command
                     key |= select(mode == TransparencyMode::DEFAULT);
 
-                    // cancel command if asked to filter translucents
+                    // cancel command if asked to filter translucent objects
                     key |= select(filterTranslucentObjects);
 
                     *curr = cmdColor;
@@ -483,7 +487,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             }
 
             if constexpr (isDepthPass) {
-                FMaterial const* const ma = mi->getMaterial();
+                ma->prepareProgram(cmdDepth.primitive.materialVariant);
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();

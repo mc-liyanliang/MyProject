@@ -69,7 +69,7 @@ public:
     void prepareTime(math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
-    void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
+    void prepareFog(math::float3 const& cameraPosition, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareBlending(bool needsAlphaChannel) noexcept;
@@ -111,11 +111,11 @@ public:
 private:
     FEngine& mEngine;
     math::float2 mClipControl{};
-    TypedUniformBuffer<PerViewUib> mPerViewUb;
-    backend::SamplerGroup mPerViewSb;
-    backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
-    backend::Handle<backend::HwBufferObject> mPerViewUbh;
-    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
+    TypedUniformBuffer<PerViewUib> mUniforms;
+    backend::SamplerGroup mSamplers;
+    backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
+    backend::Handle<backend::HwSamplerGroup> mSamplerGroupHandle;
+    std::uniform_real_distribution<float> mUniformDistribution{ 0.0f, 1.0f };
 };
 
 } // namespace filament

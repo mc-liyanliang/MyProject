@@ -13,7 +13,6 @@ set(PUBLIC_HDRS
         include/backend/CallbackHandler.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
-        include/backend/ShaderStageFlags.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
@@ -43,6 +42,7 @@ set(PRIVATE_HDRS
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
+        include/private/backend/Dispatcher.h
         include/private/backend/Driver.h
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
@@ -65,8 +65,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
-            src/opengl/OpenGLBlitter.cpp
-            src/opengl/OpenGLBlitter.h
             src/opengl/OpenGLContext.cpp
             src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp
@@ -75,8 +73,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/OpenGLProgram.cpp
             src/opengl/OpenGLProgram.h
             src/opengl/OpenGLPlatform.cpp
-            src/opengl/TimerQuery.cpp
-            src/opengl/TimerQuery.h
+            src/opengl/OpenGLTimerQuery.cpp
+            src/opengl/OpenGLTimerQuery.h
             include/private/backend/OpenGLPlatform.h
     )
     if (EGL)
@@ -89,7 +87,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     endif ()
     if (ANDROID)
         list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
-        list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
         list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)
