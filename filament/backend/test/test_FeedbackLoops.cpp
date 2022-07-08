@@ -16,8 +16,6 @@
 
 #include "BackendTest.h"
 
-#include <private/filament/EngineEnums.h>
-
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -208,7 +206,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive());
+                api.draw(state, triangle.getRenderPrimitive(), 1);
                 api.endRenderPass();
             }
 
@@ -227,7 +225,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive());
+                api.draw(state, triangle.getRenderPrimitive(), 1);
                 api.endRenderPass();
             }
 

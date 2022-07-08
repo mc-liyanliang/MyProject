@@ -168,6 +168,10 @@ bool NoopDriver::isFrameTimeSupported() {
     return true;
 }
 
+bool NoopDriver::isAutoDepthResolveSupported() {
+    return true;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
@@ -314,7 +318,8 @@ void NoopDriver::blit(TargetBufferFlags buffers,
         SamplerMagFilter filter) {
 }
 
-void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
+void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
+        uint32_t instanceCount) {
 }
 
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

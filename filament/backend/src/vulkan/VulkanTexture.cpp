@@ -29,6 +29,16 @@ using namespace bluevk;
 namespace filament {
 namespace backend {
 
+VulkanTexture::VulkanTexture(VulkanContext& context, VkImage image, VkFormat format, uint8_t samples,
+        uint32_t width, uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool) :
+        HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED, tusage),
+        mVkFormat(format),
+        mViewType(getImageViewType(target)),
+        mSwizzle({}),
+        mTextureImage(image),
+        mContext(context),
+        mStagePool(stagePool) {}
+
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage tusage, VulkanStagePool& stagePool, VkComponentMapping swizzle) :
@@ -37,9 +47,6 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         // Vulkan does not support 24-bit depth, use the official fallback format.
         mVkFormat(tformat == TextureFormat::DEPTH24 ? context.finalDepthFormat :
                 backend::getVkFormat(tformat)),
-
-        mAspect(any(usage & TextureUsage::DEPTH_ATTACHMENT) ? VK_IMAGE_ASPECT_DEPTH_BIT :
-            VK_IMAGE_ASPECT_COLOR_BIT),
 
         mViewType(getImageViewType(target)),
 
@@ -157,7 +164,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     ASSERT_POSTCONDITION(!error, "Unable to bind image.");
 
     // Spec out the "primary" VkImageView that shaders use to sample from the image.
-    mPrimaryViewRange.aspectMask = mAspect;
+    mPrimaryViewRange.aspectMask = getImageAspect();
     mPrimaryViewRange.baseMipLevel = 0;
     mPrimaryViewRange.levelCount = levels;
     mPrimaryViewRange.baseArrayLayer = 0;
@@ -179,7 +186,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     // because we do not know how many layers and levels will actually be used.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
-        VkImageSubresourceRange range = { mAspect, 0, levels, 0, layers };
+        VkImageSubresourceRange range = { getImageAspect(), 0, levels, 0, layers };
         VkImageLayout layout = getDefaultImageLayout(usage);
         VkCommandBuffer commands = mContext.commands->get().cmdbuffer;
         transitionLayout(commands, range, layout);
@@ -188,8 +195,10 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 
 VulkanTexture::~VulkanTexture() {
     delete mSidecarMSAA;
-    vkDestroyImage(mContext.device, mTextureImage, VKALLOC);
-    vkFreeMemory(mContext.device, mTextureImageMemory, VKALLOC);
+    if (mTextureImageMemory != VK_NULL_HANDLE) {
+        vkDestroyImage(mContext.device, mTextureImage, VKALLOC);
+        vkFreeMemory(mContext.device, mTextureImageMemory, VKALLOC);
+    }
     for (auto entry : mCachedImageViews) {
         vkDestroyImageView(mContext.device, entry.second, VKALLOC);
     }
@@ -243,7 +252,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     };
 
     VkImageSubresourceRange transitionRange = {
-        .aspectMask = mAspect,
+        .aspectMask = getImageAspect(),
         .baseMipLevel = miplevel,
         .levelCount = 1,
         .baseArrayLayer = 0,
@@ -285,14 +294,16 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
 
     const VkOffset3D rect[2] { {0, 0, 0}, {int32_t(width), int32_t(height), 1} };
 
+    const VkImageAspectFlags aspect = getImageAspect();
+
     const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { mAspect, 0, 0, 1 },
+        .srcSubresource = { aspect, 0, 0, 1 },
         .srcOffsets = { rect[0], rect[1] },
-        .dstSubresource = { mAspect, uint32_t(miplevel), layer, 1 },
+        .dstSubresource = { aspect, uint32_t(miplevel), layer, 1 },
         .dstOffsets = { rect[0], rect[1] }
     }};
 
-    const VkImageSubresourceRange range = { mAspect, miplevel, 1, 0, 1 };
+    const VkImageSubresourceRange range = { aspect, miplevel, 1, 0, 1 };
 
     transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -326,7 +337,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     const uint32_t width = std::max(1u, this->width >> miplevel);
     const uint32_t height = std::max(1u, this->height >> miplevel);
 
-    const VkImageSubresourceRange range = { mAspect, miplevel, 1, 0, 6 };
+    const VkImageSubresourceRange range = { getImageAspect(), miplevel, 1, 0, 6 };
     const VkImageLayout textureLayout = getDefaultImageLayout(usage);
 
     transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -405,6 +416,11 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
     return imageView;
 }
 
+VkImageAspectFlags VulkanTexture::getImageAspect() const {
+    return isDepthFormat(mVkFormat) ? VK_IMAGE_ASPECT_DEPTH_BIT :
+            VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
 void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
         VkImageLayout newLayout) {
     // In debug builds, ensure that all subresources in the given range have the same layout.
@@ -432,6 +448,10 @@ void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubr
     const uint32_t last_layer = first_layer + range.layerCount;
     const uint32_t first_level = range.baseMipLevel;
     const uint32_t last_level = first_level + range.levelCount;
+
+    assert_invariant(first_level <= 0xffff && last_level <= 0xffff);
+    assert_invariant(first_layer <= 0xffff && last_layer <= 0xffff);
+
     if (newLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
         for (uint32_t layer = first_layer; layer < last_layer; ++layer) {
             const uint32_t first = (layer << 16) | first_level;
@@ -447,7 +467,20 @@ void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubr
     }
 }
 
+// Notifies the texture that a particular subresource's layout has changed.
+void VulkanTexture::trackLayout(uint32_t miplevel, uint32_t layer, VkImageLayout layout) {
+    assert_invariant((miplevel + 1) <= 0xffff && layer <= 0xffff);
+    const uint32_t first = (layer << 16) | miplevel;
+    const uint32_t last = (layer << 16) | (miplevel + 1);
+    if (UTILS_UNLIKELY(layout == VK_IMAGE_LAYOUT_UNDEFINED)) {
+        mSubresourceLayouts.clear(first, last);
+    } else {
+        mSubresourceLayouts.add(first, last, layout);
+    }
+}
+
 VkImageLayout VulkanTexture::getVkLayout(uint32_t layer, uint32_t level) const {
+    assert_invariant(level <= 0xffff && layer <= 0xffff);
     const uint32_t key = (layer << 16) | level;
     if (!mSubresourceLayouts.has(key)) {
         return VK_IMAGE_LAYOUT_UNDEFINED;
