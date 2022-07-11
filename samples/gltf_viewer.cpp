@@ -425,9 +425,6 @@ int main(int argc, char** argv) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
-
-        // Load animation data then free the source hierarchy.
-        app.asset->getAnimator();
         app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();
@@ -666,7 +663,7 @@ int main(int argc, char** argv) {
     auto resize = [&app](Engine* engine, View* view) {
         Camera& camera = view->getCamera();
         if (&camera == app.mainCamera) {
-            // Don't adjut the aspect ratio of the main camera, this is done inside of
+            // Don't adjust the aspect ratio of the main camera, this is done inside of
             // FilamentApp.cpp
             return;
         }

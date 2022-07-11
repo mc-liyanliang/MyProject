@@ -293,6 +293,7 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetFormatSupported, backend::Text
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
@@ -483,7 +484,8 @@ DECL_DRIVER_API_N(blit,
 
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
-        backend::RenderPrimitiveHandle, rph)
+        backend::RenderPrimitiveHandle, rph,
+        uint32_t, instanceCount)
 
 #pragma clang diagnostic pop
 

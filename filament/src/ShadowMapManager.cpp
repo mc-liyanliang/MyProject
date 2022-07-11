@@ -36,6 +36,7 @@ using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // initialize our ShadowMap array in-place
+    UTILS_NOUNROLL
     for (auto& entry : mShadowMapCache) {
         new (&entry) ShadowMap(engine);
     }
@@ -48,6 +49,7 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguideline
 
 ShadowMapManager::~ShadowMapManager() {
     // destroy the ShadowMap array in-place
+    UTILS_NOUNROLL
     for (auto& entry : mShadowMapCache) {
         std::launder(reinterpret_cast<ShadowMap*>(&entry))->~ShadowMap();
     }
@@ -313,8 +315,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                 kernelWidth = kernelWidth * 4 + 5;
                 const float ratio = float(kernelWidth + 1) / sigma;
                 ppm.gaussianBlurPass(fg,
-                        shadowPass->tempBlurSrc, 0,
-                        shadows, 0, layer,
+                        shadowPass->tempBlurSrc,
+                        shadows,
                         false, kernelWidth, ratio);
             }
 

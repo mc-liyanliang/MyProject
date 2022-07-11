@@ -17,6 +17,7 @@
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/MaterialProvider.h>
+#include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
 #include "GltfEnums.h"
@@ -51,7 +52,6 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
-#include "math.h"
 #include "upcast.h"
 
 using namespace filament;
@@ -445,7 +445,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     Aabb aabb;
 
     // glTF spec says that all primitives MUST have the same number of morph targets in the same order.
-    const cgltf_size numMorphTargets = mesh->weights_count;
+    const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+    builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
@@ -454,7 +455,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
-        if (numMorphTargets > 0 && inputPrim->targets_count != numMorphTargets) {
+        if (numMorphTargets != inputPrim->targets_count) {
             slog.e << "Sister primitives must all have the same number of morph targets."
                    << io::endl;
             mError = true;
@@ -489,10 +490,18 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         // facilities for these parameters, which is not a huge loss since some of the buffer
         // view and accessor features already have this functionality.
         builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
+
+        if (numMorphTargets) {
+            assert_invariant(outputPrim->targets);
+            builder.morphing(0, index, outputPrim->targets);
+        }
     }
 
-    if (numMorphTargets > 0) {
-        builder.morphing(numMorphTargets);
+    auto& morphTargetNames = mResult->mMorphTargetNames[entity];
+    assert_invariant(morphTargetNames.empty());
+    morphTargetNames.resize(numMorphTargets);
+    for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
+        morphTargetNames[i] = utils::StaticString::make(mesh->target_names[i]);
     }
 
     const Aabb transformed = aabb.transform(worldTransform);
@@ -526,8 +535,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     // node weights are provided, they override the ones specified on the mesh.
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
-        const auto size = std::min(MAX_MORPH_TARGETS, std::max(mesh->weights_count, node->weights_count));
-        std::vector<float> weights(size);
+        const auto size = std::min(MAX_MORPH_TARGETS, numMorphTargets);
+        FixedCapacityVector<float> weights(size, 0.0f);
         for (cgltf_size i = 0, c = std::min(size, mesh->weights_count); i < c; ++i) {
             weights[i] = mesh->weights[i];
         }
@@ -624,6 +633,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         if (!getVertexAttrType(atype, &semantic)) {
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
+        }
+        if (atype == cgltf_attribute_type_weights && index > 0) {
+            utils::slog.e << "Too many bone weights in " << name << utils::io::endl;
+            continue;
+        }
+        if (atype == cgltf_attribute_type_joints && index > 0) {
+            utils::slog.e << "Too many joints in " << name << utils::io::endl;
+            continue;
         }
         if (atype == cgltf_attribute_type_texcoord) {
             if (index >= UvMapSize) {
@@ -791,6 +808,35 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     for (size_t i = firstSlot; i < mResult->mBufferSlots.size(); ++i) {
         mResult->mBufferSlots[i].vertexBuffer = vertices;
+    }
+
+    if (targetsCount > 0) {
+        MorphTargetBuffer* targets = MorphTargetBuffer::Builder()
+                .vertexCount(vertexCount)
+                .count(targetsCount)
+                .build(*mEngine);
+        outPrim->targets = targets;
+        mResult->mMorphTargetBuffers.push_back(targets);
+        const cgltf_accessor* previous = nullptr;
+        for (int tindex = 0; tindex < targetsCount; ++tindex) {
+            const cgltf_morph_target& inTarget = inPrim->targets[tindex];
+            for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                const cgltf_accessor* accessor = attribute.data;
+                const cgltf_attribute_type atype = attribute.type;
+                if (atype == cgltf_attribute_type_position) {
+                    // All position attributes must have the same data type.
+                    assert_invariant(!previous || previous->component_type == accessor->component_type);
+                    assert_invariant(!previous || previous->type == accessor->type);
+                    previous = accessor;
+                    BufferSlot slot = { accessor };
+                    slot.morphTargetBuffer = targets;
+                    slot.bufferIndex = tindex;
+                    addBufferSlot(slot);
+                    break;
+                }
+            }
+        }
     }
 
     if (needsDummyData) {

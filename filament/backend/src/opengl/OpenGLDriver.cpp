@@ -762,7 +762,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
     // is resolved.
-    bool attachmentTypeNotSupportedByMSRTT = false;
+    UTILS_UNUSED bool attachmentTypeNotSupportedByMSRTT = false;
     switch (attachment) {
         case GL_DEPTH_ATTACHMENT:
         case GL_STENCIL_ATTACHMENT:
@@ -785,7 +785,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 // note: multi-sampled textures can't have mipmaps
                 break;
             case SamplerType::SAMPLER_CUBEMAP:
-                target = getCubemapTarget(binfo.face);
+                target = getCubemapTarget(binfo.layer);
                 // note: cubemaps can't be multi-sampled
                 break;
             default:
@@ -1561,10 +1561,17 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
+bool OpenGLDriver::isAutoDepthResolveSupported() {
+    // TODO: this should return true only for GLES3.1+ and EXT_multisampled_render_to_texture2
+    return true;
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
             return mContext.bugs.split_easu;
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return mContext.bugs.allow_read_only_ancillary_feedback_loop;
     }
     return false;
 }
@@ -1905,9 +1912,9 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glTexSubImage2D(target, GLint(level), 0, 0,
                         width, height, glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + offsets[face]);
@@ -1990,9 +1997,9 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glCompressedTexSubImage2D(target, GLint(level), 0, 0,
                         width, height, t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
@@ -2964,6 +2971,19 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 
 void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
+#if defined(__EMSCRIPTEN__)
+    // WebGL builds are single-threaded so users might manipulate various GL state after we're
+    // done with the frame. We do NOT officially support using Filament in this way, but we can
+    // at least do some minimal safety things here, such as resetting the VAO to 0.
+    auto& gl = mContext;
+    gl.bindVertexArray(nullptr);
+    for (int unit = OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1; unit >= 0; unit--) {
+        gl.bindTexture(unit, GL_TEXTURE_2D, 0);
+    }
+    gl.disable(GL_CULL_FACE);
+    gl.depthFunc(GL_LESS);
+    gl.disable(GL_SCISSOR_TEST);
+#endif
     //glFinish();
     insertEventMarker("endFrame");
 }
@@ -3135,7 +3155,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
     }
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3172,8 +3192,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     setViewportScissor(state.scissor);
 
-    glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
-            rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    if (UTILS_LIKELY(instanceCount <= 1)) {
+        glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    } else {
+        glDrawElementsInstanced(GLenum(rp->type), rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset),
+                instanceCount);
+    }
 
     CHECK_GL_ERROR(utils::slog.e)
 }

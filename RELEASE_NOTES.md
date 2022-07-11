@@ -3,7 +3,53 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.19.1 (currently main branch)
+## v1.20.6 (currently main branch)
+
+## v1.20.5
+
+- engine: New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+- engine: Fix screen-space reflections when post-processing and MSAA are off.
+- engine: Update MAX_MORPH_TARGETS constant to 256.
+- engine: Fix point light lighting with ortho projection.
+- libs: BlueGL symbols are now prefixed with `bluegl` on all platforms.
+- gltfio: Add skinning getters to `FilamentAsset`.
+
+## v1.20.4
+
+- gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
+- gltfio: Fix, bone pose not applied if glTF model doesn't have animations.
+- libs: Added `math::quat::fromDirectedRotation` [**NEW API**].
+- WebGL: Restore GL state when frame ends.
+
+## v1.20.3
+
+- Java: Fix URI bug in Android Viewer sample when dropping some zips.
+- Vulkan: Fix "uninitialized texture" warnings from the Vulkan backend.
+
+## v1.20.2
+
+- engine: Binary size optimizations.
+- engine: Fix, Mat4 from Quaternion was transposed.
+- Vulkan: Internal bug fixes and robustness improvements.
+- Vulkan: Reduced log spam.
+
+## v1.20.1
+
+- engine: Binary size improvements.
+- engine: Add basic support for instanced renderables [**NEW API**].
+- engine: Fix, first imaged passsed to `Stream::SetAcquiredImage` is ignored and leaked.
+- Vulkan: Robustness improvements.
+- Java: Fix, lookAt z axis negated.
+- gltfio: Be graceful when model has > 4 weights per vert.
+
+## v1.20.0
+
+- engine: Support rough screen-space reflections [⚠️ **Material breakage**].
+- engine: Added `Scene::forEach` API to iterate through a scene's entities.
+- engine: Fix incorrect normals with skinned models.
+- Vulkan: Fix segfault during shutdown.
+- WebGL: Support web apps that have multiple `FilamentViewer`s.
+- gltfio: Performance enhancements when loading models.
 
 ## v1.19.0
 

@@ -65,7 +65,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
-    float padding0;
+    float needsAlphaChannel;
     uint32_t lightChannels;
 
     math::float3 lightDirection;
@@ -222,13 +222,9 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "BonesUniforms" };
     struct alignas(16) BoneData {
         // bone transform, last row assumed [0,0,0,1]
-        math::float4 transform[3] = {
-                {1,0,0,0},
-                {0,1,0,0},
-                {0,0,1,0}
-        };
+        math::float4 transform[3];
         // 8 first cofactor matrix of transform's upper left
-        math::uint4 cof = {};
+        math::uint4 cof;
     };
     BoneData bone;
 };
