@@ -214,6 +214,7 @@ function generate_desktop_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DUSED_AS_LIBRARY=1 \
+            -Tbuildsystem=1 \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
