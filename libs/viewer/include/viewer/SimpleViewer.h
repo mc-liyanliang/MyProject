@@ -220,6 +220,8 @@ public:
 private:
     void updateIndirectLight();
 
+    bool isRemoteMode() const { return mAsset == nullptr; }
+
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
     filament::Scene* const mScene;
@@ -237,6 +239,7 @@ private:
 
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1; // It is a 1-based index and 0 means not playing animation
+    int mCurrentVariant = 0;
     bool mResetAnimation = true;
     bool mEnableWireframe = false;
     int mVsmMsaaSamplesLog2 = 1;
@@ -245,6 +248,7 @@ private:
     uint32_t mFlags;
     utils::Entity mCurrentMorphingEntity;
     std::vector<float> mMorphWeights;
+    bool mShowingRestPose = false;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
     int mCurrentCamera = 0;

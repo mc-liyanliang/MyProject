@@ -85,17 +85,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 
 #endif
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept {
     return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount);
 }
 
+Dispatcher VulkanDriver::getDispatcher() const noexcept {
+    return ConcreteDispatcher<VulkanDriver>::make();
+}
+
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
-        DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mHandleAllocator("Handles", FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U),
         mContextManager(*platform),
         mStagePool(mContext),
@@ -373,12 +375,12 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
 
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        backend::FrameCompletedCallback callback, void* user) {
+        FrameCompletedCallback callback, void* user) {
 
 }
 
@@ -531,7 +533,7 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
-        backend::MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
+        MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
@@ -606,10 +608,6 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     construct<VulkanSwapChain>(sch, mContext, mStagePool, width, height);
 }
 
-void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
-        uint32_t width, uint32_t height) {
-}
-
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
@@ -676,10 +674,6 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
     return allocHandle<VulkanSwapChain>();
 }
 
-Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
-    return {};
-}
-
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
@@ -744,7 +738,7 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -799,7 +793,7 @@ bool VulkanDriver::isTextureSwizzleSupported() {
     return true;
 }
 
-bool VulkanDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
+bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
     switch (format) {
         case TextureFormat::DEPTH16:
         case TextureFormat::DEPTH24:
@@ -863,7 +857,7 @@ math::float2 VulkanDriver::getClipSpaceParams() {
 }
 
 uint8_t VulkanDriver::getMaxDrawBuffers() {
-    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+    return MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -1606,14 +1600,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
     srcPixels += subResourceLayout.offset;
 
-    // NOTE: the reasons for this are unclear, but issuing ReadPixels on a VkImage that has been
-    // extracted from a swap chain does not need a Y flip, but explicitly created VkImages do. (The
-    // former can be tested with "Export Screenshots" in gltf_viewer, the latter can be tested with
-    // test_ReadPixels.cpp). We've seen this behavior with both SwiftShader and MoltenVK.
-    const bool flipY = !srcTarget->isSwapChain();
-
     if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
-            subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
+            subResourceLayout.rowPitch, width, height, swizzle, false)) {
         utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
     }
 
@@ -1625,11 +1613,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     });
 
     scheduleDestroy(std::move(pbd));
-}
-
-void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& p) {
-    scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
@@ -1722,8 +1705,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     VulkanPipelineCache::VertexArray varray = {};
-    VkBuffer buffers[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
-    VkDeviceSize offsets[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    VkBuffer buffers[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    VkDeviceSize offsets[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
 
     // For each attribute, append to each of the above lists.
     const uint32_t bufferCount = prim.vertexBuffer->attributes.size();
@@ -1942,7 +1925,6 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #pragma clang diagnostic pop

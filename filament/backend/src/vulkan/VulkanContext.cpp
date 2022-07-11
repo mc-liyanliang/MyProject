@@ -20,17 +20,18 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
-#include <algorithm> // for std::max
+#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
+
+#include <algorithm> // for std::max
 
 using namespace bluevk;
 
 using utils::FixedCapacityVector;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VkImage VulkanAttachment::getImage() const {
     return texture ? texture->getVkImage() : VK_NULL_HANDLE;
@@ -367,5 +368,4 @@ void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
     emptyTexture->updateImage(pbd, 1, 1, 1, 0, 0, 0, 0);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

@@ -3,7 +3,42 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.6 (currently main branch)
+## v1.21.3 (currently main branch)
+
+- Java: Renamed the `KTXLoader` Kotlin class to `KTX1Loader`.  [⚠️ **API Change**].
+- libs: Added `Ktx2Reader` and `BasisEncoder` to support Basis-encoded KTX2 files.
+- engine: Remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
+- tools: Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
+- tools: Added support for KTX2 to mipgen.
+- gltfio: Added `resetBoneMatrices()` method.
+- gltfio: Introduced `TextureProvider` interface.  [⚠️ **API Change**].
+- gltfio: Fix progress indicator when error occurs.
+- samples: Desktop and Web Suzanne samples now use KTX2 instead of KTX1.
+- samples: Fix regression with sample-gltf-viewer and zip files.
+
+## v1.21.2
+
+- Java: Add Java binding to get skins in `FilamentAsset`.
+- libs: Add libs/ktxreader [⚠️ **API Change**].
+- mipgen: fixups / clarification regarding sRGB.
+- WebGL: fix intermittent 'detached ArrayBuffer' errors.
+
+## v1.21.1
+
+- engine: Allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+- engine: Optimizations for screen-space reflections.
+- engine: Remove `Viewport::scale()` [⚠️ **API Change**].
+- engine: Fix 12x overallocation of memory in `MorphTargetBuffer`.
+- Metal: Fix validation error when reading from default `SwapChain`.
+
+## v1.21.0
+
+- engine: OpenGL performance improvements with some drivers.
+- engine: Fix incorrect shadows with some custom projection matrices.
+- engine: Fix low frame rates seen with a lot of morph targets.
+- gltfio: Add support for KHR_materials_variants.
+- gltfio: Add support for KHR_materials_emissive_strength.
+- gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
 
 ## v1.20.5
 
@@ -429,7 +464,7 @@ devices.
 - engine: Fix RenderTarget NPE when depth is not present.
 - engine: Improvements to Camera APIs. Move focus distance from DofOptions to Camera.
 - engine: VSM shadows now support `shadowMultiplier`.
-- java: Expose severla MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
+- java: Expose several MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
   should have been public.
 - java: fix bug with Texture::setImage buffer size calculation.
 

@@ -413,6 +413,7 @@
 					"-lfilament",
 					"-lbackend",
 					"-lfilaflat",
+					"-lktxreader",
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
@@ -422,10 +423,12 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-lstb",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
 					"-lcivetweb",
+					"-lktxreader",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
 				SDKROOT = iphoneos;
@@ -461,6 +464,7 @@
 					"-lfilament",
 					"-lbackend",
 					"-lfilaflat",
+					"-lktxreader",
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
@@ -470,10 +474,12 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-lstb",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
 					"-lcivetweb",
+					"-lktxreader",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
 				SDKROOT = iphoneos;
@@ -571,6 +577,7 @@
 					"-lfilament",
 					"-lbackend",
 					"-lfilaflat",
+					"-lktxreader",
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
@@ -580,10 +587,12 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-lstb",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
 					"-lcivetweb",
+					"-lktxreader",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
 				SDKROOT = iphoneos;
@@ -619,6 +628,7 @@
 					"-lfilament",
 					"-lbackend",
 					"-lfilaflat",
+					"-lktxreader",
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
@@ -628,10 +638,12 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-lstb",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
 					"-lcivetweb",
+					"-lktxreader",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
 				SDKROOT = iphoneos;

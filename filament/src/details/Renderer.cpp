@@ -32,9 +32,9 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
-#include "fg2/FrameGraph.h"
-#include "fg2/FrameGraphId.h"
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphResources.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
@@ -186,13 +186,21 @@ void FRenderer::render(FView const* view) {
 
     assert_invariant(mSwapChain);
 
-    if (mBeginFrameInternal) {
+    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
+        // this should not happen, the user should not call render() if we returned false from
+        // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
+        if (mViewRenderedCount) {
+            // this is a good place to kick the GPU, since we've rendered a View before
+            // and we're about to render another one.
+            mEngine.getDriverApi().flush();
+        }
         renderInternal(view);
+        mViewRenderedCount++;
     }
 }
 
@@ -254,17 +262,30 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
+    // whether we're scaled at all
     const bool scaled = any(notEqual(scale, float2(1.0f)));
-    filament::Viewport svp = vp.scale(scale);
+
+    // The scale factor guarantees that the width and height are integers (multiple of 8, in fact),
+    // and all the code below ignores entirely svp's origin -- because we want to render the view
+    // at the origin of the buffer, so we set it to zero here to make that fact clear.
+    const filament::Viewport svp = {
+            0, 0, // this is ignored
+            uint32_t(float(vp.width ) * scale.x),
+            uint32_t(float(vp.height) * scale.y)
+    };
+
     if (svp.empty()) {
         return;
     }
 
     const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
-    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
     const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
-    view.prepare(engine, driver, arena, svp, getShaderUserTime(), needsAlphaChannel);
+
+    CameraInfo cameraInfo = view.computeCameraInfo(engine);
+
+    view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
     view.prepareUpscaler(scale);
 
@@ -272,7 +293,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     JobSystem::Job* jobFroxelize = nullptr;
     if (view.hasDynamicLighting()) {
         jobFroxelize = js.runAndRetain(js.createJob(nullptr,
-                [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+                [&engine, &view, &viewMatrix = cameraInfo.view](JobSystem&, JobSystem::Job*) {
+                    view.froxelize(engine, viewMatrix); }));
     }
 
     /*
@@ -317,7 +339,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        view.renderShadowMaps(fg, engine, driver, shadowPass);
+        auto shadows = view.renderShadowMaps(fg, engine, driver, shadowPass);
+        blackboard["shadows"] = shadows;
     }
 
     // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
@@ -383,8 +406,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
-            .hasContactShadows = scene.hasContactShadows(),
-            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
+            .hasContactShadows = scene.hasContactShadows()
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -410,8 +432,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Depth + Color passes
      */
 
-    CameraInfo cameraInfo = view.getCameraInfo();
-
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
     view.updatePrimitivesLod(engine, cameraInfo,
@@ -434,16 +454,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
+    const auto [structure, picking_] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
+    blackboard["structure"] = structure;
+    const auto picking = picking_;
+
 
     if (view.hasPicking()) {
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
-        auto picking = blackboard.get<FrameGraphTexture>("picking");
         fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.picking = builder.read(picking,
@@ -472,25 +494,34 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (aoOptions.enabled) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
-        ppm.screenSpaceAmbientOcclusion(fg, svp, cameraInfo, aoOptions);
+        auto ssao = ppm.screenSpaceAmbientOcclusion(fg, svp, cameraInfo, structure, aoOptions);
+        blackboard["ssao"] = ssao;
     }
+
+    // --------------------------------------------------------------------------------------------
+    // prepare screen-space reflection/refraction passes
+
+    PostProcessManager::ScreenSpaceRefConfig ssrConfig = PostProcessManager::prepareMipmapSSR(
+            fg, svp.width, svp.height,
+            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
+    config.ssrLodOffset = ssrConfig.lodOffset;
+    blackboard["ssr"] = ssrConfig.ssr;
 
     // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
 
-    if (config.hasScreenSpaceReflections) {
+    if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, pass,
                 view.getFrameHistory(), cameraInfo,
-                view.getPerViewUniforms(), view.getScreenSpaceReflectionsOptions(),
+                view.getPerViewUniforms(),
+                structure,
+                ssReflectionsOptions,
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
-        reflections = PostProcessManager::generateMipmapSSR(ppm, fg, reflections,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::RGBA16F,
-                &config.ssrLodOffset);
-
-        blackboard["ssr"] = reflections;
+        reflections = PostProcessManager::generateMipmapSSR(ppm, fg,
+                reflections, ssrConfig.reflection, false, ssrConfig);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -561,7 +592,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
         // the color pass + refraction + color-grading as subpass if needed
-        colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
+        colorPassOutput = refractionPass(fg, config, ssrConfig, colorGradingConfigForColor, pass, view);
     }
 
     if (colorGradingConfig.customResolve) {
@@ -577,6 +608,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         struct ExportSSRHistoryData {
             FrameGraphId<FrameGraphTexture> history;
         };
+        // FIXME: should we use the TAA-modified cameraInfo here or not? (we are).
+        auto projection = mat4f{
+                cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin) };
         fg.addPass<ExportSSRHistoryData>("Export SSR history",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     // We need to use sideEffect here to ensure this pass won't be culled.
@@ -584,12 +618,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     // an "import".
                     builder.sideEffect();
                     data.history = builder.sample(colorPassOutput); // FIXME: an access must be declared for detach(), why?
-                }, [&view](FrameGraphResources const& resources, auto const& data,
+                }, [&view, projection](FrameGraphResources const& resources, auto const& data,
                         backend::DriverApi&) {
-                    const auto& cameraInfo = view.getCameraInfo();
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
-                    current.ssr.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+                    current.ssr.projection = projection;
                     resources.detach(data.history,
                             &current.ssr.color, &current.ssr.desc);
                 });
@@ -604,9 +637,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not used below.
-    auto depth = blackboard.get<FrameGraphTexture>("depth");
-    depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer", depth);
-    blackboard.put("depth", depth);
+    auto const depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer",
+            blackboard.get<FrameGraphTexture>("depth"));
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
     //       fireflies due to the instability of the highlights. This can be fixed with a
@@ -615,7 +647,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), &FrameHistoryEntry::taa,
+        input = ppm.taa(fg, input, depth, view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
     }
 
@@ -625,18 +657,26 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool mightNeedFinalBlit = true;
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-            input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
+            // The bokeh height is always correct regardless of the dynamic resolution scaling.
+            // (because the CoC is calculated w.r.t. the height), so we only need to adjust
+            // the width.
+            float bokehAspectRatio = scale.x / scale.y;
+            input = ppm.dof(fg, input, depth, cameraInfo, needsAlphaChannel,
+                    bokehAspectRatio, dofOptions);
         }
 
+        FrameGraphId<FrameGraphTexture> bloom, flare;
         if (bloomOptions.enabled) {
             // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
             // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
-            ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
+            auto [bloom_, flare_] = ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
+            bloom = bloom_;
+            flare = flare_;
         }
 
         if (hasColorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input,
+                input = ppm.colorGrading(fg, input, bloom, flare,
                         colorGrading, colorGradingConfig,
                         bloomOptions, vignetteOptions, scale);
             }
@@ -695,7 +735,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
 
-//    auto debug = fg.getBlackboard().get<FrameGraphTexture>("structure");
+//    auto debug = structure
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
     fg.forwardResource(fgViewRenderTarget, input);
@@ -716,6 +756,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
+        PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass,
         FView const& view) const noexcept {
@@ -736,7 +777,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
     // if there wasn't any refractive object, just skip everything below.
     if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
         PostProcessManager& ppm = mEngine.getPostProcessManager();
-        float refractionLodOffset = 0.0f;
 
         // clear the color/depth buffers, which will orphan (and cull) the color pass
         input.clear();
@@ -758,14 +798,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 view);
 
         // generate the mipmap chain
-        input = PostProcessManager::generateMipmapSSR(ppm, fg, input,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::R11F_G11F_B10F,
-                &refractionLodOffset);
-
-        // and this becomes our SSR buffer
-        blackboard["ssr"] = input;
-
+        PostProcessManager::generateMipmapSSR(ppm, fg,
+                input, ssrConfig.refraction, true, ssrConfig);
 
         // Now we're doing the refraction pass proper.
         // This uses the same framebuffer (color and depth) used by the opaque pass. This happens
@@ -773,8 +807,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // pass). For this reason, `desc` below is only used in colorPass() for the width and
         // height.
         config.clearFlags = TargetBufferFlags::NONE;
-        config.hasScreenSpaceReflections = false; // FIXME: for now we can't have both
-        config.ssrLodOffset = refractionLodOffset;
         output = colorPass(fg, "Color Pass (transparent)",
                 {
                         .width = config.svp.width,
@@ -834,7 +866,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.ssr = builder.sample(data.ssr);
                 }
 
-                if (config.hasContactShadows || config.hasScreenSpaceReflections) {
+                if (config.hasContactShadows) {
                     data.structure = blackboard.get<FrameGraphTexture>("structure");
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
@@ -897,6 +929,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
+                /*
+                 * There is a bit of magic happening here regarding the viewport used.
+                 * We do not specify the viewport in declareRenderPass() below, so it will be
+                 * deduced automatically to be { 0, 0, w, h }, with w,h the min width/height of
+                 * all the attachments. This has the side effect of moving the viewport to the
+                 * origin and ignore the left/bottom of 'svp'. The attachment sizes are set from
+                 * svp's width/height, however.
+                 * But that's not all! When we're rendering directly into the swap-chain (by way
+                 * of calling forwardResource() later), the effective viewport comes from the
+                 * imported resource (i.e. the swap-chain) and is set to 'vp' which has its
+                 * left/bottom honored -- the view is therefore rendered directly where it should
+                 * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
+                 * is initialized in this file).
+                 */
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,
@@ -926,7 +972,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set screen-space reflections and screen-space refractions
                 TextureHandle ssr = data.ssr ?
-                        resources.getTexture(data.ssr) : ppm.getOneTexture();
+                        resources.getTexture(data.ssr) : ppm.getOneTextureArray();
 
                 view.prepareSSR(ssr, config.ssrLodOffset,
                         view.getScreenSpaceReflectionsOptions());
@@ -950,7 +996,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
                 passExecutor.execute(resources.getPassName(), out.target, out.params);
 
-                // color pass is typically heavy and we don't have much CPU work left after
+                // color pass is typically heavy, and we don't have much CPU work left after
                 // this point, so flushing now allows us to start the GPU earlier and reduce
                 // latency, without creating bubbles.
                 driver.flush();
@@ -1024,6 +1070,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
+    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];
