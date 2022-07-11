@@ -712,8 +712,6 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/resgen)
     add_subdirectory(${TOOLS}/glslminifier)
     add_subdirectory(${LIBRARIES}/imageio)
-    add_subdirectory(${EXTERNAL}/astcenc/tnt)
-    add_subdirectory(${EXTERNAL}/etc2comp)
 
     add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
