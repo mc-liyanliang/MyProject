@@ -5,6 +5,37 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.2
+
+- gltfio: Fix morphing for un-packed accessors.
+- gltfio: Ubershaders are now packaged into flexible archives.
+- gltfio: Remove poorly maintained lite flavor.
+- engine: Disable user scissor while rendering the Shadow Maps.
+- engine: Merge identical backend `RenderPrimitives` together.
+- engine: Improve `ResourceAllocator` performance a bit by reserving 128 cache entries.
+- utils: Remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
+- backend: Fix WGL context attributes.
+- Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
+
+## v1.23.1
+
+- gltfio: support skinning with bones that do not belong to any scene.
+- gltfio: add `attachSkin` / `detachSkin` method to FilamentAsset.
+- gltfio: ubershader mode: set sheen to `OPAQUE`.
+- Metal: fix issues seen with dynamic resolution on M1 Macs.
+- engine: add a "global" mode for render primitive's `blendOrder`.
+- engine: remove `RenderManager::setGeometryAt(index, count)`. [⚠️ **API Change**]
+- engine: fix overallocation by about 17MB.
+- WebGL: Add JS bindings for Texture class methods.
+
+## v1.23.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Normals on morphed models have been fixed (core Filament change).
+- Java: View has several minor changes due to generated code, such as field ordering.
+- gltfio: Fix crash when reloading glTF assets.
+- gltfio: introduce cross-fade animation API [**NEW API**].
+
 ## v1.22.2
 
 - Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]

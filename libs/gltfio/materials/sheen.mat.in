@@ -1,11 +1,11 @@
 material {
-    name : sheen_${SHADINGMODEL}_${BLENDING},
+    name : sheen_ubershader,
     requires : [ uv0, uv1, color ],
-    shadingModel : ${SHADINGMODEL},
-    blending : fade,
+    shadingModel : lit,
+    blending : opaque,
     depthWrite : true,
-    doubleSided : ${DOUBLESIDED},
-    transparency : ${TRANSPARENCY},
+    doubleSided : false,
+    transparency : default,
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
@@ -55,20 +55,15 @@ material {
         { type : mat3, name : sheenRoughnessUvMatrix, precision: high },
 
         // Reflectance
-        { type : float, name : reflectance },
+        { type : float, name : reflectance }
 
-        // Clip Space Transform
-        {
-            type : float4x4,
-            precision : high,
-            name : cstransform
-        }
+        ${CUSTOM_PARAMS}
     ],
 }
 
 vertex {
-    void materialVertex(inout MaterialVertexInputs material) {
-        material.clipSpaceTransform = materialParams.cstransform;
+  void materialVertex(inout MaterialVertexInputs material) {
+      ${CUSTOM_VERTEX}
     }
 }
 
@@ -140,5 +135,7 @@ fragment {
             uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
             material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
         }
+
+        ${CUSTOM_FRAGMENT}
     }
 }

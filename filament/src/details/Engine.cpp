@@ -178,7 +178,8 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mLightManager(*this),
         mCameraManager(*this),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
-        mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mPerRenderPassAllocator("FEngine::mPerRenderPassAllocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
@@ -233,11 +234,9 @@ void FEngine::init() {
     mFullScreenTriangleIb->setBuffer(*this,
             { sFullScreenTriangleIndices, sizeof(sFullScreenTriangleIndices) });
 
-    mFullScreenTriangleRph = driverApi.createRenderPrimitive();
-    driverApi.setRenderPrimitiveBuffer(mFullScreenTriangleRph,
-            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle());
-    driverApi.setRenderPrimitiveRange(mFullScreenTriangleRph, PrimitiveType::TRIANGLES,
-            0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
+    mFullScreenTriangleRph = driverApi.createRenderPrimitive(
+            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle(),
+            PrimitiveType::TRIANGLES, 0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
 
     // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
     // backend differences.
