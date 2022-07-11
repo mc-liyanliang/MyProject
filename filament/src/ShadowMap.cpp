@@ -22,7 +22,6 @@
 
 #include "details/Engine.h"
 #include "details/Scene.h"
-#include "details/View.h"
 
 #include <backend/DriverEnums.h>
 
@@ -31,10 +30,11 @@
 
 #include <limits>
 
-using namespace filament::math;
 using namespace utils;
 
 namespace filament {
+
+using namespace math;
 using namespace backend;
 
 // do this only if depth-clamp is available
@@ -58,6 +58,9 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
         debugRegistry.registerProperty("d.shadowmap.dzn", &engine.debug.shadowmap.dzn);
         debugRegistry.registerProperty("d.shadowmap.dzf", &engine.debug.shadowmap.dzf);
     }
+}
+
+void ShadowMap::terminate(FEngine& engine) {
 }
 
 ShadowMap::~ShadowMap() {
@@ -318,7 +321,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 
         if (params.options.stable) {
             // Use the world origin as reference point, fixed w.r.t. the camera
-            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz,
+            snapLightFrustum(s, o, Mv, -camera.getWorldOffset(),
                     1.0f / mShadowMapInfo.shadowDimension);
         }
 

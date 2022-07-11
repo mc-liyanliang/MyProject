@@ -123,31 +123,9 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
-enum_<View::QualityLevel>("View$QualityLevel")
-    .value("LOW", View::QualityLevel::LOW)
-    .value("MEDIUM", View::QualityLevel::MEDIUM)
-    .value("HIGH", View::QualityLevel::HIGH)
-    .value("ULTRA", View::QualityLevel::ULTRA);
-
 enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
     .value("NONE", View::AmbientOcclusion::NONE)
     .value("SSAO", View::AmbientOcclusion::SSAO);
-
-enum_<View::BlendMode>("View$BlendMode")
-    .value("OPAQUE", View::BlendMode::OPAQUE)
-    .value("TRANSLUCENT", View::BlendMode::TRANSLUCENT);
-
-enum_<View::BloomOptions::BlendMode>("View$BloomOptions$BlendMode")
-    .value("ADD", View::BloomOptions::BlendMode::ADD)
-    .value("INTERPOLATE", View::BloomOptions::BlendMode::INTERPOLATE);
-
-enum_<View::AntiAliasing>("View$AntiAliasing")
-    .value("NONE", View::AntiAliasing::NONE)
-    .value("FXAA", View::AntiAliasing::FXAA);
-
-enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
-    .value("NONE", View::DepthOfFieldOptions::Filter::NONE)
-    .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN);
 
 enum_<Camera::Fov>("Camera$Fov")
     .value("VERTICAL", Camera::Fov::VERTICAL)
@@ -421,8 +399,15 @@ enum_<backend::CullingMode>("CullingMode")
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
 
-enum_<ktxreader::Ktx2Reader::TransferFunction>("TransferFunction")
+enum_<ktxreader::Ktx2Reader::TransferFunction>("Ktx2Reader$TransferFunction")
     .value("LINEAR", ktxreader::Ktx2Reader::TransferFunction::LINEAR)
     .value("sRGB", ktxreader::Ktx2Reader::TransferFunction::sRGB);
+
+enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
+    .value("SUCCESS", ktxreader::Ktx2Reader::Result::SUCCESS)
+    .value("COMPRESSED_TRANSCODE_FAILURE", ktxreader::Ktx2Reader::Result::COMPRESSED_TRANSCODE_FAILURE)
+    .value("UNCOMPRESSED_TRANSCODE_FAILURE", ktxreader::Ktx2Reader::Result::UNCOMPRESSED_TRANSCODE_FAILURE)
+    .value("FORMAT_UNSUPPORTED", ktxreader::Ktx2Reader::Result::FORMAT_UNSUPPORTED)
+    .value("FORMAT_ALREADY_REQUESTED", ktxreader::Ktx2Reader::Result::FORMAT_ALREADY_REQUESTED);
 
 }

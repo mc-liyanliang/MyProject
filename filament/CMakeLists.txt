@@ -77,6 +77,7 @@ set(SRCS
         src/RenderTarget.cpp
         src/RenderableManager.cpp
         src/Renderer.cpp
+        src/RendererUtils.cpp
         src/ResourceAllocator.cpp
         src/ResourceList.cpp
         src/Scene.cpp
@@ -143,6 +144,7 @@ set(PRIVATE_HDRS
         src/PerViewUniforms.h
         src/PIDController.h
         src/PostProcessManager.h
+        src/RendererUtils.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/ResourceAllocator.h
@@ -449,6 +451,34 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/separableGaussianBlur4.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur1L.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur2L.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur3L.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur4L.filamat"
         DEPENDS src/materials/separableGaussianBlur.vs
         DEPENDS src/materials/separableGaussianBlur.fs
         APPEND

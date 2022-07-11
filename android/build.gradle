@@ -81,10 +81,10 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 31,
         'compileSdk': 31,
-        'kotlin': '1.6.10',
-        'kotlin_coroutines': '1.6.0',
+        'kotlin': '1.6.21',
+        'kotlin_coroutines': '1.6.1',
         'buildTools': '32.0.0',
-        'ndk': '23.1.7779620'
+        'ndk': '24.0.8215888'
     ]
 
     ext.deps = [
@@ -101,11 +101,12 @@ buildscript {
 
     dependencies {
         // NOTE: See TODO in gradle.properties once we move to Gradle 7.4
-        classpath 'com.android.tools.build:gradle:7.1.1'
+        classpath 'com.android.tools.build:gradle:7.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
     ext.cmakeArgs = [
+        "--no-warn-unused-cli",
         "-DANDROID_PIE=ON",
         "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",
@@ -117,8 +118,6 @@ buildscript {
 
     ext.cppFlags = [
         "-std=c++17",
-        "-Wno-unused-command-line-argument",
-        "-Wl,--hash-style=both", // Required to support API levels below 23
         "-fno-stack-protector",
         "-fno-exceptions",
         "-fno-unwind-tables",
@@ -131,8 +130,13 @@ buildscript {
         "-fomit-frame-pointer",
         "-ffunction-sections",
         "-fdata-sections",
+        "-no-canonical-prefixes",
+        "-Wformat",
+        "-Werror=format-security",
+        "-Wno-unused-command-line-argument",
         "-Wl,--gc-sections",
         "-Wl,-Bsymbolic-functions",
+        "-Wl,--hash-style=both", // Required to support API levels below 23
     ]
 
     ext.abis = abis

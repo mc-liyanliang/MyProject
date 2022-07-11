@@ -83,6 +83,7 @@ public class View {
     private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
     private SoftShadowOptions mSoftShadowOptions;
+    private GuardBandOptions mGuardBandOptions;
 
     /**
      * Generic quality level.
@@ -251,7 +252,7 @@ public class View {
         * Distance from where tracing starts.
         * This affects how far shadows are cast.
         */
-       public float ssctStartTraceDistance = 0.01f;
+       public float ssctShadowDistance = 0.01f;
 
        /**
         * Maximum contact distance with the cone. Intersections between the traced cone and
@@ -357,6 +358,19 @@ public class View {
         public boolean enabled = false;
     };
 
+    /**
+     * Options for the  screen-space guard band.
+     * A guard band can be enabled to avoid some artifacts towards the edge of the screen when
+     * using screen-space effects such as SSAO.
+     * Enabling the guard band reduces performance slightly.
+     * Currently the guard band can only be enabled or disabled.
+     *
+     * @see View#setGuardBandOptions
+     */
+    public static class GuardBandOptions {
+        /** enables or disables the guard band */
+        public boolean enabled = false;
+    };
 
     /**
      * Options for controlling the Bloom effect
@@ -425,7 +439,7 @@ public class View {
         /**
          * How the bloom effect is applied
          */
-        public BlendingMode blendingMode = BlendingMode.ADD;
+        public BlendingMode blendMode = BlendingMode.ADD;
 
         /**
          * Whether to threshold the source
@@ -558,6 +572,7 @@ public class View {
 
         public enum Filter {
             NONE,
+            UNUSED,
             MEDIAN
         }
 
@@ -1209,17 +1224,6 @@ public class View {
     }
 
     /**
-     * Enables or disable screen-space reflections. Disabled by default.
-     *
-     * @param options screen-space reflections options
-     */
-    public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
-        mScreenSpaceReflectionsOptions = options;
-        nSetScreenSpaceReflectionsOptions(getNativeObject(), options.thickness, options.bias,
-                options.maxDistance, options.stride, options.enabled);
-    }
-
-    /**
      * Returns temporal anti-aliasing options.
      *
      * @return temporal anti-aliasing options
@@ -1230,6 +1234,17 @@ public class View {
             mTemporalAntiAliasingOptions = new TemporalAntiAliasingOptions();
         }
         return mTemporalAntiAliasingOptions;
+    }
+
+    /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
+    public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
+        mScreenSpaceReflectionsOptions = options;
+        nSetScreenSpaceReflectionsOptions(getNativeObject(), options.thickness, options.bias,
+                options.maxDistance, options.stride, options.enabled);
     }
 
     /**
@@ -1244,6 +1259,30 @@ public class View {
         }
         return mScreenSpaceReflectionsOptions;
     }
+
+    /**
+     * Enables or disable screen-space guard band. Disabled by default.
+     *
+     * @param options guard band options
+     */
+    public void setGuardBandOptions(@NonNull GuardBandOptions options) {
+        mGuardBandOptions = options;
+        nSetGuardBandOptions(getNativeObject(), options.enabled);
+    }
+
+    /**
+     * Returns screen-space guard band options.
+     *
+     * @return guard band options
+     */
+    @NonNull
+    public GuardBandOptions getGuardBandOptions() {
+        if (mGuardBandOptions == null) {
+            mGuardBandOptions = new GuardBandOptions();
+        }
+        return mGuardBandOptions;
+    }
+
 
     /**
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
@@ -1577,7 +1616,7 @@ public class View {
                 options.resolution, options.intensity, options.bilateralThreshold,
                 options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
                 options.enabled, options.bentNormals, options.minHorizonAngleRad);
-        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance,
+        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctShadowDistance,
                 options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
                 options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
@@ -1607,7 +1646,7 @@ public class View {
         mBloomOptions = options;
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
-                options.anamorphism, options.levels, options.blendingMode.ordinal(),
+                options.anamorphism, options.levels, options.blendMode.ordinal(),
                 options.threshold, options.enabled, options.highlight,
                 options.lensFlare, options.starburst, options.chromaticAberration,
                 options.ghostCount, options.ghostSpacing, options.ghostThreshold,
@@ -1833,6 +1872,9 @@ public class View {
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
+    private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
     private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
+
+    // The remainder of this file is generated by beamsplitter
 }

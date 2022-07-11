@@ -3,7 +3,31 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.21.3 (currently main branch)
+## main branch
+
+## v1.22.2
+
+- Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]
+- Java: Minor API change: rename `blendingMode` to `blendMode`. [⚠️ **API Change**]
+- engine: Fix some memory leaks.
+
+## v1.22.1
+
+- Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
+- engine: add support for presentation time in `Renderer`
+- engine: added guard bands support for screen-space effects
+- gltfio: Add multi-scene support.
+- gltfio: Various glTF-related cleanup and enhancements.
+- gltfio: Add support for KHR_texture_basisu.
+
+## v1.22.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Improve effects relying on mipmapping
+- engine: Fix assert seen with VSM shadows.
+- WebGL: Fix `isTextureFormatSupported` for ETC2 formats.
+
+## v1.21.3
 
 - Java: Renamed the `KTXLoader` Kotlin class to `KTX1Loader`.  [⚠️ **API Change**].
 - libs: Added `Ktx2Reader` and `BasisEncoder` to support Basis-encoded KTX2 files.

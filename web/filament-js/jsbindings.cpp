@@ -58,7 +58,7 @@
 
 #include <geometry/SurfaceOrientation.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
@@ -361,92 +361,6 @@ value_object<filament::Renderer::ClearOptions>("Renderer$ClearOptions")
     .field("clear", &filament::Renderer::ClearOptions::clear)
     .field("discard", &filament::Renderer::ClearOptions::discard);
 
-value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOptions")
-    .field("radius", &filament::View::AmbientOcclusionOptions::radius)
-    .field("power", &filament::View::AmbientOcclusionOptions::power)
-    .field("bias", &filament::View::AmbientOcclusionOptions::bias)
-    .field("resolution", &filament::View::AmbientOcclusionOptions::resolution)
-    .field("intensity", &filament::View::AmbientOcclusionOptions::intensity)
-    .field("bilateralThreshold", &filament::View::AmbientOcclusionOptions::bilateralThreshold)
-    .field("quality", &filament::View::AmbientOcclusionOptions::quality)
-    .field("lowPassFilter", &filament::View::AmbientOcclusionOptions::lowPassFilter)
-    .field("upsampling", &filament::View::AmbientOcclusionOptions::upsampling)
-    .field("enabled", &filament::View::AmbientOcclusionOptions::enabled)
-    .field("bentNormals", &filament::View::AmbientOcclusionOptions::bentNormals)
-    .field("minHorizonAngleRad", &filament::View::AmbientOcclusionOptions::minHorizonAngleRad);
-    // TODO: ssct options
-
-value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
-    .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
-    .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
-    .field("enabled", &filament::View::DepthOfFieldOptions::enabled)
-    .field("filter", &filament::View::DepthOfFieldOptions::filter)
-    .field("nativeResolution", &filament::View::DepthOfFieldOptions::nativeResolution)
-    .field("foregroundRingCount", &filament::View::DepthOfFieldOptions::foregroundRingCount)
-    .field("backgroundRingCount", &filament::View::DepthOfFieldOptions::backgroundRingCount)
-    .field("fastGatherRingCount", &filament::View::DepthOfFieldOptions::fastGatherRingCount)
-    .field("maxForegroundCOC", &filament::View::DepthOfFieldOptions::maxForegroundCOC)
-    .field("maxBackgroundCOC", &filament::View::DepthOfFieldOptions::maxBackgroundCOC);
-
-value_object<filament::View::MultiSampleAntiAliasingOptions>("View$MultiSampleAntiAliasingOptions")
-    .field("enabled", &filament::View::MultiSampleAntiAliasingOptions::enabled)
-    .field("sampleCount", &filament::View::MultiSampleAntiAliasingOptions::sampleCount)
-    .field("customResolve", &filament::View::MultiSampleAntiAliasingOptions::customResolve);
-
-value_object<filament::View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOptions")
-    .field("enabled", &filament::View::TemporalAntiAliasingOptions::enabled)
-    .field("filterWidth", &filament::View::TemporalAntiAliasingOptions::filterWidth)
-    .field("feedback", &filament::View::TemporalAntiAliasingOptions::feedback);
-
-value_object<filament::View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOptions")
-    .field("thickness", &filament::View::ScreenSpaceReflectionsOptions::thickness)
-    .field("bias", &filament::View::ScreenSpaceReflectionsOptions::bias)
-    .field("maxDistance", &filament::View::ScreenSpaceReflectionsOptions::maxDistance)
-    .field("stride", &filament::View::ScreenSpaceReflectionsOptions::stride)
-    .field("enabled", &filament::View::ScreenSpaceReflectionsOptions::enabled);
-
-value_object<filament::View::BloomOptions>("View$BloomOptions")
-    .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
-    .field("strength", &filament::View::BloomOptions::strength)
-    .field("resolution", &filament::View::BloomOptions::resolution)
-    .field("anamorphism", &filament::View::BloomOptions::anamorphism)
-    .field("levels", &filament::View::BloomOptions::levels)
-    .field("threshold", &filament::View::BloomOptions::threshold)
-    .field("enabled", &filament::View::BloomOptions::enabled)
-    .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("highlight", &filament::View::BloomOptions::highlight)
-    .field("lensFlare", &filament::View::BloomOptions::lensFlare)
-    .field("starburst", &filament::View::BloomOptions::starburst)
-    .field("chromaticAberration", &filament::View::BloomOptions::chromaticAberration)
-    .field("ghostCount", &filament::View::BloomOptions::ghostCount)
-    .field("ghostSpacing", &filament::View::BloomOptions::ghostSpacing)
-    .field("ghostThreshold", &filament::View::BloomOptions::ghostThreshold)
-    .field("haloThickness", &filament::View::BloomOptions::haloThickness)
-    .field("haloRadius", &filament::View::BloomOptions::haloRadius)
-    .field("haloThreshold", &filament::View::BloomOptions::haloThreshold);
-
-// TODO: add support for dirt texture in BloomOptions.
-// Note that simply including the field in the above list causes binding errors for nullptr.
-
-value_object<filament::View::FogOptions>("View$FogOptions")
-    .field("distance", &filament::View::FogOptions::distance)
-    .field("maximumOpacity", &filament::View::FogOptions::maximumOpacity)
-    .field("height", &filament::View::FogOptions::height)
-    .field("heightFalloff", &filament::View::FogOptions::heightFalloff)
-    .field("color", &filament::View::FogOptions::color)
-    .field("density", &filament::View::FogOptions::density)
-    .field("inScatteringStart", &filament::View::FogOptions::inScatteringStart)
-    .field("inScatteringSize", &filament::View::FogOptions::inScatteringSize)
-    .field("fogColorFromIbl", &filament::View::FogOptions::fogColorFromIbl)
-    .field("enabled", &filament::View::FogOptions::enabled);
-
-value_object<filament::View::VignetteOptions>("View$VignetteOptions")
-    .field("midPoint", &filament::View::VignetteOptions::midPoint)
-    .field("roundness", &filament::View::VignetteOptions::roundness)
-    .field("feather", &filament::View::VignetteOptions::feather)
-    .field("color", &filament::View::VignetteOptions::color)
-    .field("enabled", &filament::View::VignetteOptions::enabled);
-
 value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("mapSize", &LightManager::ShadowOptions::mapSize)
     .field("shadowCascades", &LightManager::ShadowOptions::shadowCascades)
@@ -707,6 +621,7 @@ class_<View>("View")
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
+    .function("_setGuardBandOptions", &View::setGuardBandOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)
@@ -1826,6 +1741,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return EntityVector(ptr, ptr + self->getLightEntityCount());
     }), allow_raw_pointers())
 
+    .function("_getRenderableEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getRenderableEntities();
+        return EntityVector(ptr, ptr + self->getRenderableEntityCount());
+    }), allow_raw_pointers())
+
     .function("_getCameraEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getCameraEntities();
         return EntityVector(ptr, ptr + self->getCameraEntityCount());
@@ -1895,9 +1815,8 @@ struct UbershaderLoader {
     void destroyMaterials() { provider->destroyMaterials(); }
 };
 
-struct StbProvider {
-    TextureProvider* provider;
-};
+struct StbProvider { TextureProvider* provider; };
+struct Ktx2Provider { TextureProvider* provider; };
 
 class_<UbershaderLoader>("gltfio$UbershaderLoader")
     .constructor(EMBIND_LAMBDA(UbershaderLoader, (Engine* engine), {
@@ -1908,6 +1827,11 @@ class_<UbershaderLoader>("gltfio$UbershaderLoader")
 class_<StbProvider>("gltfio$StbProvider")
     .constructor(EMBIND_LAMBDA(StbProvider, (Engine* engine), {
         return StbProvider { createStbProvider(engine) };
+    }));
+
+class_<Ktx2Provider>("gltfio$Ktx2Provider")
+    .constructor(EMBIND_LAMBDA(Ktx2Provider, (Engine* engine), {
+        return Ktx2Provider { createKtx2Provider(engine) };
     }));
 
 class_<AssetLoader>("gltfio$AssetLoader")
@@ -1971,8 +1895,13 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
         self->addResourceData(url.c_str(), std::move(*buffer.bd));
     }), allow_raw_pointers())
 
-    .function("addTextureProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+    .function("addStbProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
             StbProvider provider), {
+        self->addTextureProvider(mime.c_str(), provider.provider);
+    }), allow_raw_pointers())
+
+    .function("addKtx2Provider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            Ktx2Provider provider), {
         self->addTextureProvider(mime.c_str(), provider.provider);
     }), allow_raw_pointers())
 
@@ -1997,14 +1926,14 @@ class_<JsonSerializer>("JsonSerializer")
     .constructor<>()
     .function("writeJson", &JsonSerializer::writeJson);
 
-class_<SimpleViewer>("SimpleViewer")
+class_<ViewerGui>("ViewerGui")
     .constructor<Engine*, Scene*, View*, int>()
-    .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
-    .function("getSettings", &SimpleViewer::getSettings)
-    .function("mouseEvent", &SimpleViewer::mouseEvent)
-    .function("keyDownEvent", &SimpleViewer::keyDownEvent)
-    .function("keyUpEvent", &SimpleViewer::keyUpEvent)
-    .function("keyPressEvent", &SimpleViewer::keyPressEvent);
+    .function("renderUserInterface", &ViewerGui::renderUserInterface, allow_raw_pointers())
+    .function("getSettings", &ViewerGui::getSettings)
+    .function("mouseEvent", &ViewerGui::mouseEvent)
+    .function("keyDownEvent", &ViewerGui::keyDownEvent)
+    .function("keyUpEvent", &ViewerGui::keyUpEvent)
+    .function("keyPressEvent", &ViewerGui::keyPressEvent);
 
 function("fitIntoUnitCube", EMBIND_LAMBDA(flatmat4, (Aabb box, float zoffset), {
     return flatmat4 { fitIntoUnitCube(box, zoffset) };
