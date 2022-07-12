@@ -2,7 +2,7 @@
 set -e
 
 # Host tools required by Android, WebGL, and iOS builds
-MOBILE_HOST_TOOLS="matc resgen cmgen"
+MOBILE_HOST_TOOLS="matc resgen cmgen filamesh uberz"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 
 function print_help {
@@ -604,6 +604,7 @@ function generate_ios_target {
      if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
          cmake \
              -G "Xcode" \
+             -Tbuildsystem=1 \
              -DIMPORT_EXECUTABLES_DIR="../Builds/ios/filament/" \
              -DCMAKE_BUILD_TYPE="$1" \
              -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
