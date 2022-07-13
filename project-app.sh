@@ -192,10 +192,10 @@ function generate_desktop_target {
         build_targets=${BUILD_CUSTOM_TARGETS}
     fi
 
-    echo "Generating ${lc_target} in ../Builds/Linux/filament/..."
-    mkdir -p "../Builds/Linux/filament/"
+    echo "Generating ${lc_target} in out/cmake-${lc_target}..."
+    mkdir -p "out/cmake-${lc_target}"
 
-    cd "../Builds/Linux/filament/"
+    cd "out/cmake-${lc_target}"
 
     # On macOS, set the deployment target to 10.15.
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
@@ -210,18 +210,16 @@ function generate_desktop_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "Xcode" \
-            -DIMPORT_EXECUTABLES_DIR="../Builds/Linux/filament/" \
+            -DIMPORT_EXECUTABLES_DIR="out" \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
-            -DUSED_AS_LIBRARY=1 \
+            -DUSED_AS_LIBRARY=0 \
             -Tbuildsystem=1 \
-            -DCUSTOM_PARAMS=", { type : float4x4, precision : high, name : cstransform}" \
-            -DCUSTOM_VERTEX="material.clipSpaceTransform = materialParams.cstransform;" \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
-            ../../../renderer/
+            ../..
     fi
 
     cd ../..
