@@ -647,7 +647,7 @@ function generate_proj_ios {
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
 
-    generate_ios_target "Release" "arm64" "iphoneos"
+    generate_ios_target "Debug" "arm64" "iphoneos"
 }
 
 function build_web_docs {
