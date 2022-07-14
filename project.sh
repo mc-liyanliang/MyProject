@@ -601,13 +601,13 @@ function generate_ios_target {
 
     cd "../Builds/ios/filament/"
 
-    build_desktop_target "$1" "${MOBILE_HOST_TOOLS}" "../Builds/ios/filament/"
+    build_desktop_target "$1" "${MOBILE_HOST_TOOLS}" "../Builds/ios/filament"
 
      if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
          cmake \
              -G "Xcode" \
              -Tbuildsystem=1 \
-             -DIMPORT_EXECUTABLES_DIR="../Builds/ios/filament/" \
+             -DIMPORT_EXECUTABLES_DIR="../Builds/ios/filament" \
              -DCMAKE_BUILD_TYPE="$1" \
              -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
              -DIOS_ARCH="${arch}" \
@@ -615,6 +615,8 @@ function generate_ios_target {
              -DIOS=1 \
              -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
              -DCMAKE_TOOLCHAIN_FILE=../../../renderer/third_party/clang/iOS.cmake \
+             -DCUSTOM_PARAMS=", { type : float4x4, precision : high, name : cstransform}" \
+             -DCUSTOM_VERTEX="material.clipSpaceTransform = materialParams.cstransform;" \
              ${MATDBG_OPTION} \
              ../../../renderer/
      fi
