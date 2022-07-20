@@ -338,6 +338,8 @@ public:
 
     FilamentInstance** getAssetInstances() noexcept;
     size_t getAssetInstanceCount() const noexcept;
+    
+    int32_t getTextureUrls(std::vector<char*>& outUrls) const noexcept;
 
 protected:
     FilamentAsset() noexcept = default;

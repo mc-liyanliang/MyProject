@@ -270,6 +270,8 @@ struct FFilamentAsset : public FilamentAsset {
     bool isInstanced() const {
         return mInstances.size() > 0;
     }
+    
+    int32_t getTextureUrls(std::vector<char*>& outUrls) const noexcept;
 
     void createAnimators();
 

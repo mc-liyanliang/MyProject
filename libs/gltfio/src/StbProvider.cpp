@@ -176,7 +176,7 @@ void StbProvider::updateQueue() {
         Texture* texture = info->texture;
         if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
             if (info->decoderJob) {
-                js->waitAndRelease(info->decoderJob);
+                js->release(info->decoderJob);
             }
             if (data == DECODING_ERROR) {
                 info->state = TextureState::READY;

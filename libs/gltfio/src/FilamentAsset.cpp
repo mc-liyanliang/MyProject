@@ -283,6 +283,18 @@ void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entiti
     }
 }
 
+int32_t FFilamentAsset::getTextureUrls(std::vector<char*>& outUrls) const noexcept
+{
+    for (auto& slot : mTextureSlots)
+    {
+        const cgltf_texture* srcTexture = slot.texture;
+        const cgltf_image* image = srcTexture->basisu_image ? srcTexture->basisu_image : srcTexture->image;
+        outUrls.emplace_back(image->uri);
+    }
+    
+    return (int32_t)outUrls.size();
+}
+
 size_t FilamentAsset::getEntityCount() const noexcept {
     return upcast(this)->getEntityCount();
 }
@@ -459,6 +471,10 @@ const char* FilamentAsset::getSceneName(size_t sceneIndex) const noexcept {
 void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
         SceneMask sceneFilter) {
     upcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);
+}
+
+int32_t FilamentAsset::getTextureUrls(std::vector<char*>& outUrls) const noexcept {
+    upcast(this)->getTextureUrls(outUrls);
 }
 
 } // namespace filament::gltfio
