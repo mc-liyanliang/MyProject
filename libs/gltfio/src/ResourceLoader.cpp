@@ -97,12 +97,18 @@ struct ResourceLoader::Impl {
     FilepathTextureCache mFilepathTextureCache;
 
     FFilamentAsset* mAsyncAsset = nullptr;
+    
+    using Params = TangentsJob::Params;
+    std::vector<Params> mTangentJobParams;
+    JobSystem::Job* mTangentJob = nullptr;
 
-    void computeTangents(FFilamentAsset* asset);
+    void computeTangents(FFilamentAsset* asset, bool async);
     bool createTextures(FFilamentAsset* asset, bool async);
     void cancelTextureDecoding();
     Texture* getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb);
     ~Impl();
+    void asyncUploadTangents(FFilamentAsset* asset);
+    void uploadTangents(FFilamentAsset* asset);
 };
 
 uint32_t computeBindingSize(const cgltf_accessor* accessor);
@@ -545,7 +551,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     // Compute surface orientation quaternions if necessary. This is similar to sparse data in that
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
-    pImpl->computeTangents(asset);
+    pImpl->computeTangents(asset, async);
 
     // Finally, create Filament Textures and begin loading image files.
     asset->mResourcesLoaded = pImpl->createTextures(asset, async);
@@ -597,6 +603,8 @@ void ResourceLoader::asyncUpdateLoad() {
             pImpl->mAsyncAsset->mDependencyGraph.markAsReady(texture);
         }
     }
+    
+    pImpl->asyncUploadTangents(pImpl->mAsyncAsset);
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
@@ -744,7 +752,7 @@ bool ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     return true;
 }
 
-void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
+void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset, bool async) {
     SYSTRACE_CALL();
 
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
@@ -760,8 +768,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     }
 
     // Create a job description for each triangle-based primitive.
-    using Params = TangentsJob::Params;
-    std::vector<Params> jobParams;
+    std::vector<Params>& jobParams = mTangentJobParams;
+    jobParams.clear();
     for (auto pair : asset->mPrimitives) {
         if (UTILS_UNLIKELY(pair.first->type != cgltf_primitive_type_triangles)) {
             continue;
@@ -811,15 +819,44 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Kick off jobs for computing tangent frames.
     JobSystem* js = &mEngine->getJobSystem();
-    JobSystem::Job* parent = js->createJob();
+    mTangentJob = js->createJob();;
+    JobSystem::Job* parent = mTangentJob;
     for (Params& params : jobParams) {
         Params* pptr = &params;
         js->run(jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }));
     }
-    js->runAndWait(parent);
+    
+    if (!async)
+    {
+        js->runAndWait(parent);
+        uploadTangents(asset);
+    }
+    else
+    {
+        js->runAndRetain(parent);
+    }
+}
 
+ResourceLoader::Impl::~Impl() {
+    for (const auto& iter : mTextureProviders) {
+        iter.second->cancelDecoding();
+    }
+}
+
+void ResourceLoader::Impl::asyncUploadTangents(FFilamentAsset* asset)
+{
+    JobSystem* js = &mEngine->getJobSystem();
+    if (mTangentJob && js->isJobCompleted(mTangentJob))
+    {
+        uploadTangents(asset);
+        js->release(mTangentJob);
+    }
+}
+
+void ResourceLoader::Impl::uploadTangents(FFilamentAsset* asset)
+{
     // Finally, upload quaternions to the GPU from the main thread.
-    for (Params& params : jobParams) {
+    for (Params& params : mTangentJobParams) {
         if (params.context.vb) {
             BufferObject* bo = BufferObject::Builder()
                     .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
@@ -833,12 +870,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
                     params.out.results, params.out.vertexCount);
             free(params.out.results);
         }
-    }
-}
-
-ResourceLoader::Impl::~Impl() {
-    for (const auto& iter : mTextureProviders) {
-        iter.second->cancelDecoding();
     }
 }
 

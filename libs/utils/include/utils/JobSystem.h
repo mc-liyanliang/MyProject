@@ -302,6 +302,8 @@ public:
     size_t getParallelSplitCount() const noexcept {
         return mParallelSplitCount;
     }
+    
+    bool isJobCompleted(Job const* job) noexcept;
 
 private:
     // this is just to avoid using std::default_random_engine, since we're in a public header.

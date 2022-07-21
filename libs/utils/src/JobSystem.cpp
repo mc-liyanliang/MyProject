@@ -109,6 +109,10 @@ void JobSystem::setThreadAffinityById(size_t id) noexcept {
 #endif
 }
 
+bool JobSystem::isJobCompleted(Job const* job) noexcept {
+    return hasJobCompleted(job);
+}
+
 JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreadsCount) noexcept
     : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
       mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
