@@ -107,7 +107,7 @@ struct ResourceLoader::Impl {
     void cancelTextureDecoding();
     Texture* getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb);
     ~Impl();
-    void asyncUploadTangents(FFilamentAsset* asset);
+    bool asyncUploadTangents(FFilamentAsset* asset);
     void uploadTangents(FFilamentAsset* asset);
 };
 
@@ -603,8 +603,15 @@ void ResourceLoader::asyncUpdateLoad() {
             pImpl->mAsyncAsset->mDependencyGraph.markAsReady(texture);
         }
     }
+}
+
+bool ResourceLoader::asyncUploadTangents()
+{
+    if (!pImpl->mAsyncAsset) {
+        return;
+    }
     
-    pImpl->asyncUploadTangents(pImpl->mAsyncAsset);
+    return pImpl->asyncUploadTangents(pImpl->mAsyncAsset);
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
@@ -843,14 +850,18 @@ ResourceLoader::Impl::~Impl() {
     }
 }
 
-void ResourceLoader::Impl::asyncUploadTangents(FFilamentAsset* asset)
+bool ResourceLoader::Impl::asyncUploadTangents(FFilamentAsset* asset)
 {
+    bool bComplete = false;
     JobSystem* js = &mEngine->getJobSystem();
     if (mTangentJob && js->isJobCompleted(mTangentJob))
     {
         uploadTangents(asset);
         js->release(mTangentJob);
+        bComplete = true;
     }
+    
+    return bComplete;
 }
 
 void ResourceLoader::Impl::uploadTangents(FFilamentAsset* asset)

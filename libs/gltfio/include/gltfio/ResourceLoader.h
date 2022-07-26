@@ -158,6 +158,8 @@ public:
      * and cancellation is required before progress reaches 100%.
      */
     void asyncCancelLoad();
+    
+    bool asyncUploadTangents();
 
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
