@@ -852,16 +852,14 @@ ResourceLoader::Impl::~Impl() {
 
 bool ResourceLoader::Impl::asyncUploadTangents(FFilamentAsset* asset)
 {
-    bool bComplete = false;
     JobSystem* js = &mEngine->getJobSystem();
     if (mTangentJob && js->isJobCompleted(mTangentJob))
     {
         uploadTangents(asset);
         js->release(mTangentJob);
-        bComplete = true;
     }
     
-    return bComplete;
+    return mTangentJob == NULL;
 }
 
 void ResourceLoader::Impl::uploadTangents(FFilamentAsset* asset)
