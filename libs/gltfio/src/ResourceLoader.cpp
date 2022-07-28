@@ -608,7 +608,7 @@ void ResourceLoader::asyncUpdateLoad() {
 bool ResourceLoader::asyncUploadTangents()
 {
     if (!pImpl->mAsyncAsset) {
-        return;
+        return false;
     }
     
     return pImpl->asyncUploadTangents(pImpl->mAsyncAsset);
