@@ -255,7 +255,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
     TransformManager* transformManager = mImpl->transformManager;
     RenderableManager* renderableManager = mImpl->renderableManager;
-    time = fmod(time, anim.duration);
+    time = time > anim.duration? fmod(time, anim.duration) : time;
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
         if (sampler->times.size() < 2) {
