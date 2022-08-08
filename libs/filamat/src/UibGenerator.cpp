@@ -90,7 +90,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
             .add("lightDirection",            UniformInterfaceBlock::Type::FLOAT3)
-            .add("padding0",                  UniformInterfaceBlock::Type::FLOAT)
+            .add("skyIntensity",              UniformInterfaceBlock::Type::FLOAT)
             .add("lightColorIntensity",       UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                       UniformInterfaceBlock::Type::FLOAT4)
             .add("lightFarAttenuationParams", UniformInterfaceBlock::Type::FLOAT2)

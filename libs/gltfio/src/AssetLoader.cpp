@@ -1404,7 +1404,7 @@ LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
         case cgltf_light_type_point:
             return LightManager::Type::POINT;
         case cgltf_light_type_spot:
-            return LightManager::Type::FOCUSED_SPOT;
+            return LightManager::Type::SPOT;
     }
 }
 

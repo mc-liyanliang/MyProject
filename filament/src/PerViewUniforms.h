@@ -98,7 +98,7 @@ public:
     void prepareDirectionalLight(float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
 
-    void prepareAmbientLight(FIndirectLight const& ibl, float intensity, float exposure) noexcept;
+    void prepareAmbientLight(FIndirectLight const& ibl, float iblLuminance, float skyIntensity, float exposure) noexcept;
 
     void prepareDynamicLights(Froxelizer& froxelizer) noexcept;
 

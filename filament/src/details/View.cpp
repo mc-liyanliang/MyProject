@@ -371,17 +371,19 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
     // associated with the skybox.
-    float intensity;
+    float iblLuminance, skyIntensity;
     FIndirectLight const* ibl = scene->getIndirectLight();
+    FSkybox const* const skybox = scene->getSkybox();
     if (UTILS_LIKELY(ibl)) {
-        intensity = ibl->getIntensity();
+        iblLuminance = ibl->getIntensity();
+        skyIntensity = skybox? skybox->getIntensity() : iblLuminance;
     } else {
         ibl = engine.getDefaultIndirectLight();
-        FSkybox const* const skybox = scene->getSkybox();
-        intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+        skyIntensity = skybox? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+        iblLuminance = skyIntensity;
     }
 
-    mPerViewUniforms.prepareAmbientLight(*ibl, intensity, exposure);
+    mPerViewUniforms.prepareAmbientLight(*ibl, iblLuminance, skyIntensity, exposure);
 
     /*
      * Directional light (always at index 0)

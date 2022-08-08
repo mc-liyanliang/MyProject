@@ -252,15 +252,16 @@ void PerViewUniforms::prepareDirectionalLight(
     }
 }
 
-void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
-        float intensity, float exposure) noexcept {
+void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl, float iblLuminance,
+                                          float skyIntensity, float exposure) noexcept {
     auto& engine = mEngine;
     auto& s = mUniforms.edit();
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
     float iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
-    s.iblLuminance = intensity * exposure;
+    s.iblLuminance = iblLuminance * exposure;
+    s.skyIntensity = skyIntensity * exposure;
     std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
         return float4(v, 0.0f);
     });
