@@ -64,7 +64,7 @@ private:
     FMaterialInstance* mSkyboxMaterialInstance = nullptr;
     utils::Entity mSkybox;
     FRenderableManager& mRenderableManager;
-    float mIntensity = 0.0f;
+    float mIntensity = 1.0f;
     uint8_t mLayerMask = 0x1;
 };
 

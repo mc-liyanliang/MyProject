@@ -261,7 +261,7 @@ void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl, float iblLu
     float iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
     s.iblLuminance = iblLuminance * exposure;
-    s.skyIntensity = skyIntensity * exposure;
+    s.skyIntensity = skyIntensity;
     std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
         return float4(v, 0.0f);
     });
