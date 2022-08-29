@@ -217,6 +217,7 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     highp vec2 fragCoord = gl_FragCoord.xy;
     fragCoord += vec2(frameUniforms.temporalNoise); // 0 when TAA is not used
     float jitterFraction = interleavedGradientNoise(fragCoord);
+    jitterFraction = 1.0;
 
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
