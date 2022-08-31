@@ -58,10 +58,7 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
 bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
-        const highp mat4 uvFromViewMatrix, const highp sampler2D vsZBuffer,
-        const float vsZThickness, const highp float nearPlaneZ, const float stride,
-        const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
-        out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
+        const highp mat4 uvFromViewMatrix, const highp sampler2D vsZBuffer, highp vec2 vsZBufferSize, const float vsZThickness, const highp float nearPlaneZ, const float stride, const float jitterFraction, const float maxRayTraceDistance, out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
     // good idea)
     highp float rayLength = ((vsOrigin.z + vsDirection.z * maxRayTraceDistance) > nearPlaneZ) ?
@@ -109,11 +106,15 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
         delta = delta.yx;
         P1 = P1.yx;
         P0 = P0.yx;
+        vsZBufferSize = vsZBufferSize.yx;
     }
 
     // From now on, "x" is the primary iteration direction and "y" is the secondary one
 
     float stepDirection = sign(delta.x);
+    float maxSteps = abs(P0.x - saturate(stepDirection) * vsZBufferSize.x);
+
+
     highp float invdx = stepDirection / delta.x;
     highp vec2 dP = vec2(stepDirection, invdx * delta.y);
 
@@ -136,6 +137,7 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
     // we actually only have to compute one value per iteration.
     highp float prevZMaxEstimate = vsOrigin.z;
     highp float stepCount = 0.0;
+    highp float stepStride = 0.0;
     highp float rayZMax = prevZMaxEstimate;
     highp float rayZMin = prevZMaxEstimate;
     highp float sceneZMax = rayZMax + 1e4;
@@ -149,11 +151,11 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
 
     for (highp vec2 P = P0;
         ((P.x * stepDirection) <= end) &&
-        (stepCount < maxSteps) &&
+        (stepCount < maxSteps) && (stepStride < maxSteps) &&
         ((rayZMax < sceneZMax - vsZThickness) ||
             (rayZMin > sceneZMax)) &&
         (sceneZMax != 0.0);
-        P += dP, Q.z += dQ.z, k += dk, stepCount += 1.0) {
+        P += dP, Q.z += dQ.z, k += dk, stepCount += 1.0, stepStride += stride) {
 
         hitPixel = permute ? P.yx : P;
 
@@ -232,9 +234,9 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     highp vec2 hitPixel;  // not currently used
     highp vec3 vsHitPoint;
 
-    if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, light_structure,
-            vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
-            maxRayTraceDistance, hitPixel, vsHitPoint)) {
+    stride *= mix(1.0, 5.0, max(0.0, vsDirection.z));
+    if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, light_structure, 
+                            res, vsZThickness, nearPlaneZ, stride, jitterFraction, maxRayTraceDistance, hitPixel, vsHitPoint)) {
         highp vec4 reprojected = mulMat4x4Float3(frameUniforms.ssrReprojection, vsHitPoint);
         reprojected.xy *= (1.0 / reprojected.w);
 
