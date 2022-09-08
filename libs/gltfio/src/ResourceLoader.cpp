@@ -402,6 +402,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                     slog.e << "Unable to load " << uri << io::endl;
                     return false;
                 }
+                gltf->buffers[i].data_free_method = cgltf_data_free_method_memory_free;
             } else {
                 slog.e << "Unable to load " << uri << io::endl;
                 return false;
@@ -416,6 +417,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             // TODO: Future versions of CGLTF will make this easier, see the following ticket.
             // https://github.com/jkuhlmann/cgltf/issues/94
             gltf->buffers[i].data = malloc(iter->second.size);
+            gltf->buffers[i].data_free_method = cgltf_data_free_method_memory_free;
             memcpy(gltf->buffers[i].data, iter->second.buffer, iter->second.size);
         } else {
             slog.e << "Unable to load " << uri << io::endl;

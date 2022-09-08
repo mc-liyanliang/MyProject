@@ -968,7 +968,7 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
                     light->spot_inner_cone_angle,
                     light->spot_outer_cone_angle);
             builder.intensity(light->intensity, 1.0);
-            builder.castShadows(true);
+            builder.castShadows(false);
             break;
     }
 
