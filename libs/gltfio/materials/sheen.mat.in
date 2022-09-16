@@ -9,7 +9,6 @@ material {
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
-    reflections : screenspace,
     parameters : [
 
         // Base Color

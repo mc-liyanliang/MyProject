@@ -10,7 +10,6 @@ material {
     specularAntiAliasing : true,
     refractionMode: screenspace,
     refractionType: thin,
-    reflections: screenspace,
     parameters : [
 
         // Base Color
